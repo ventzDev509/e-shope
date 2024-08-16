@@ -1,3 +1,4 @@
+import { CategoryModule } from './category/Categories.module';
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { PrismaModule } from './prisma/prisma.module';
@@ -6,7 +7,6 @@ import { ValidationPipe } from '@nestjs/common';
 import { AuthModule } from './authentificaion/auth.module';
 import { usersModule } from './users/users.module';
 import { ProductModule } from './product/product.module';
-import { CategoryModule } from './category/Categories.module';
 
 @Module({
   imports: [
