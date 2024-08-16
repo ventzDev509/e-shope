@@ -7,6 +7,7 @@ import { ValidationPipe } from '@nestjs/common';
 import { AuthModule } from './authentificaion/auth.module';
 import { usersModule } from './users/users.module';
 import { ProductModule } from './product/product.module';
+import { CategoriesModule } from './categories/categories.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { ProductModule } from './product/product.module';
     usersModule,
     AuthModule,
     ProductModule,
+    CategoriesModule,
   ],
   providers: [
     {
