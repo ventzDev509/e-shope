@@ -18,7 +18,7 @@ import { CategoriesModule } from './categories/categories.module';
     ProductModule,
     CategoriesModule,
   ],
-  providers: [
+  providers: [ 
     {
       provide: APP_PIPE,
       useClass: ValidationPipe,

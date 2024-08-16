@@ -1,23 +1,25 @@
-import { IsString, IsNotEmpty, IsNumber, IsInt, IsOptional } from 'class-validator';
+// src/product/dto/create-product.dto.ts
+import { IsInt, IsNotEmpty, IsNumber, IsOptional, IsString } from 'class-validator';
 
 export class CreateProductDto {
-  @IsString()
   @IsNotEmpty()
+  @IsString()
   name: string;
 
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
-  description: string;
+  description?: string;
 
-  @IsNumber()
   @IsNotEmpty()
+  @IsNumber()
   price: number;
 
-  @IsInt()
   @IsNotEmpty()
+  @IsInt()
   stock: number;
 
-  @IsInt()
   @IsNotEmpty()
+  @IsInt()
   categoryId: number;
+
 }
