@@ -75,7 +75,7 @@ export class OrderService {
       }
 
       // Gestion des erreurs internes
-      console.log(error)
+      console.log(error);
       throw new InternalServerErrorException(
         'An unexpected error occurred while creating the order',
       );
@@ -119,6 +119,18 @@ export class OrderService {
       throw new NotFoundException(`Order with ID ${orderId} not found`);
     }
 
+    return order;
+  }
+  async getOrderByUserId(userId: number) {
+    // Vérifie si la commande existe
+    const order = await this.prismaService.order.findMany({
+      where: { userId: userId },
+      include: { items: true, payments: true }, // Inclure les items et paiements si nécessaire
+    });
+
+    if (order.length === 0) {
+      throw new NotFoundException(`No orders found for user with ID ${userId}`);
+    }
     return order;
   }
 }

@@ -7,6 +7,7 @@ import {
   HttpException,
   Get,
   UseGuards,
+  Req,
 } from '@nestjs/common';
 import { Response } from 'express';
 import { OrderService } from './order.service';
@@ -21,6 +22,12 @@ export class OrderController {
   @UseGuards(JwtAuthGuard)
   async getAllOrders() {
     return this.orderService.getAllOrders();
+  }
+  @Get()
+  @UseGuards(JwtAuthGuard)
+  async getAllOrdersByUser(@Req() req, @Res() res) {
+    const userId = req.user.id;
+    return this.orderService.getOrderByUserId(userId);
   }
   @Post()
   async createOrder(
