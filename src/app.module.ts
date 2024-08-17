@@ -8,6 +8,7 @@ import { AuthModule } from './authentificaion/auth.module';
 import { usersModule } from './users/users.module';
 import { ProductModule } from './product/product.module';
 import { CategoriesModule } from './categories/categories.module';
+import { OrderModule } from './order/order.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { CategoriesModule } from './categories/categories.module';
     AuthModule,
     ProductModule,
     CategoriesModule,
+    OrderModule,
   ],
   providers: [ 
     {

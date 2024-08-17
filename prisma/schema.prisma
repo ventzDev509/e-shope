@@ -37,6 +37,22 @@ model Product {
   orderItems  OrderItem[]
   createdBy   Int
   admin       User        @relation(fields: [createdBy], references: [id])
+  colors      Color[]     @relation("ProductColors")
+  sizes       Size[]      @relation("ProductSizes")
+}
+
+model Color {
+  id        Int     @id @default(autoincrement())
+  name      String
+  productId Int
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade, name: "ProductColors")
+}
+
+model Size {
+  id        Int     @id @default(autoincrement())
+  name      String
+  productId Int
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade, name: "ProductSizes")
 }
 
 model Category {
@@ -93,7 +109,8 @@ model Review {
 
 model Payment {
   id      Int    @id @default(autoincrement())
-  amount  Float
+  amount  Float 
+  method  String @default("moncash") // Ajoutez ce champ pour indiquer le mode de paiement
   status  String @default("PENDING") // PENDING, COMPLETED, FAILED
   orderId Int
   order   Order  @relation(fields: [orderId], references: [id])

@@ -18,8 +18,15 @@ export class ProductService {
     try {
       const products = await this.prismaService.product.findMany({
         include: {
-          category: true, // Include category information if needed
-          admin: true, // Include admin information if needed
+          category: true, // Inclure les informations de catégorie si nécessaire
+          admin: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              // Ne pas inclure le champ password
+            },
+          },
         },
       });
 
@@ -32,38 +39,46 @@ export class ProductService {
   }
 
   async getProductsByAdmin(userId: number) {
-    // Check if the user exists and is an admin
     const user = await this.prismaService.user.findUnique({
       where: { id: userId },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        // Ne pas inclure le champ password
+      },
     });
 
     if (!user || user.role !== UserRole.ADMIN) {
-      throw new ForbiddenException('You do not have permission to view these products.');
+      throw new ForbiddenException(
+        'You do not have permission to view these products.',
+      );
     }
 
-    // Retrieve all products created by the admin
     const products = await this.prismaService.product.findMany({
       where: { createdBy: userId },
+      include: {
+        category: true, // Inclure les informations de catégorie si nécessaire
+      },
     });
 
     return products;
   }
 
-  
-
   async createProduct(createProductDto: CreateProductDto, userId: number) {
-    const { name, description, price, stock, categoryId } = createProductDto;
+    const { name, description, price, stock, categoryId, colors, sizes } =
+      createProductDto;
 
     try {
-      const existingProduct = await this.prismaService.product.findFirst({
-        where: { name },
-      });
-    
-      if (existingProduct) {
-        throw new ConflictException('A product with this name already exists.');
-      }
-    
-      // Create the product
+      // const existingProduct = await this.prismaService.product.findFirst({
+      //   where: { name },
+      // });
+
+      // if (existingProduct) {
+      //   throw new ConflictException('A product with this name already exists.');
+      // }
+
       const product = await this.prismaService.product.create({
         data: {
           name,
@@ -76,35 +91,45 @@ export class ProductService {
           admin: {
             connect: { id: userId },
           },
+          colors: {
+            create: colors?.map((colorName) => ({ name: colorName })), // Utilisation du champ `name` pour créer les couleurs
+          },
+          sizes: {
+            create: sizes?.map((sizeValue) => ({ name: sizeValue })), // Même logique pour les tailles
+          },
+        },
+        include: {
+          colors: true,
+          sizes: true,
         },
       });
-      if(product){
+
+      if (product) {
         return product;
       }
-    
     } catch (error) {
-      if (error instanceof NotFoundException || error instanceof ConflictException) {
-        // This is expected; no need to treat it as an internal server error
+      if (
+        error instanceof NotFoundException ||
+        error instanceof ConflictException
+      ) {
         throw error;
       }
-    
+
       throw new InternalServerErrorException(
         'An unexpected error occurred while creating the product',
       );
     }
-    
   }
-
 
   async updateProduct(
     productId: number,
     updateProductDto: UpdateProductDto,
     userId: number,
   ) {
-    const { name, description, price, stock, categoryId } = updateProductDto;
+    const { name, description, price, stock, categoryId, colors, sizes } =
+      updateProductDto;
 
     try {
-      // Vérifie si l'utilisateur est un administrateur
       const user = await this.prismaService.user.findUnique({
         where: { id: userId },
       });
@@ -119,7 +144,6 @@ export class ProductService {
         );
       }
 
-      // Vérifie si le produit existe
       const product = await this.prismaService.product.findUnique({
         where: { id: productId },
       });
@@ -128,23 +152,20 @@ export class ProductService {
         throw new NotFoundException('Product not found');
       }
 
-      // Vérifie si l'utilisateur est l'administrateur qui a créé le produit
       if (product.createdBy !== userId) {
         throw new ForbiddenException(
           'You do not have permission to update this product.',
         );
       }
 
-      // Vérifie si une autre produit avec le même nom existe déjà
-      const existingProduct = await this.prismaService.product.findFirst({
-        where: { name },
-      });
+      // const existingProduct = await this.prismaService.product.findFirst({
+      //   where: { name },
+      // });
 
-      if (existingProduct && existingProduct.id !== productId) {
-        throw new ConflictException('A product with this name already exists.');
-      }
+      // if (existingProduct && existingProduct.id !== productId) {
+      //   throw new ConflictException('A product with this name already exists.');
+      // }
 
-      // Mise à jour du produit
       const updatedProduct = await this.prismaService.product.update({
         where: { id: productId },
         data: {
@@ -155,12 +176,21 @@ export class ProductService {
           category: {
             connect: { id: categoryId },
           },
+          colors: {
+            create: colors?.map((colorName) => ({ name: colorName })), // Utilisation du champ `name` pour créer les couleurs
+          },
+          sizes: {
+            create: sizes?.map((sizeValue) => ({ name: sizeValue })), // Même logique pour les tailles
+          },
+        },
+        include: {
+          colors: true,
+          sizes: true,
         },
       });
 
       return updatedProduct;
     } catch (error) {
-      // Gérer les erreurs spécifiques
       if (
         error instanceof NotFoundException ||
         error instanceof ConflictException ||
@@ -169,17 +199,14 @@ export class ProductService {
         throw error;
       }
 
-      // Gestion des erreurs internes
       throw new InternalServerErrorException(
         'An unexpected error occurred while updating the product',
       );
     }
   }
 
-
   async deleteProduct(productId: number, userId: number) {
     try {
-      // Fetch the product to check ownership
       const product = await this.prismaService.product.findUnique({
         where: { id: productId },
       });
@@ -188,33 +215,30 @@ export class ProductService {
         throw new NotFoundException('Product not found.');
       }
 
-      // Check if the requesting user is the admin who created the product
       if (product.createdBy !== userId) {
         throw new ForbiddenException(
           'You do not have permission to delete this product.',
         );
       }
 
-      // Delete the product
       await this.prismaService.product.delete({
         where: { id: productId },
       });
 
       return { message: 'Product successfully deleted.' };
-      
     } catch (error) {
-      // Handle specific exceptions
-      if (error instanceof NotFoundException || error instanceof ForbiddenException) {
+      if (
+        error instanceof NotFoundException ||
+        error instanceof ForbiddenException
+      ) {
         throw error;
       }
 
-      // Handle internal errors
       throw new InternalServerErrorException(
         'An unexpected error occurred while deleting the product.',
       );
     }
   }
-
 
   async searchProductsByName(name: string) {
     const lowerCaseName = name.toLowerCase();
@@ -222,8 +246,12 @@ export class ProductService {
     const products = await this.prismaService.product.findMany({
       where: {
         name: {
-          contains: lowerCaseName, // Partial match
-        }
+          contains: lowerCaseName,
+        },
+      },
+      include: {
+        colors: true,
+        sizes: true,
       },
     });
 
@@ -234,16 +262,19 @@ export class ProductService {
     return products;
   }
 
-
   async searchProductsByNameByAdmin(name: string, userId: number) {
     const lowerCaseName = name.toLowerCase();
 
     const products = await this.prismaService.product.findMany({
       where: {
         name: {
-          contains: lowerCaseName, // Partial match
+          contains: lowerCaseName,
         },
-        createdBy: userId, // Ensure only products created by the specific admin are returned
+        createdBy: userId,
+      },
+      include: {
+        colors: true,
+        sizes: true,
       },
     });
 

@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsNumber, IsOptional, IsString } from 'class-validator';
+import { IsArray, IsOptional, IsString, IsNumber } from 'class-validator';
 
 export class UpdateProductDto {
   @IsOptional()
@@ -20,4 +20,14 @@ export class UpdateProductDto {
   @IsOptional()
   @IsNumber()
   categoryId?: number;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  colors?: string[];
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  sizes?: string[];
 }

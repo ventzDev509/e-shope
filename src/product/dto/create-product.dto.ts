@@ -1,5 +1,4 @@
-// src/product/dto/create-product.dto.ts
-import { IsInt, IsNotEmpty, IsNumber, IsOptional, IsString } from 'class-validator';
+import { IsInt, IsNotEmpty, IsNumber, IsOptional, IsString, IsArray, ArrayNotEmpty } from 'class-validator';
 
 export class CreateProductDto {
   @IsNotEmpty()
@@ -22,4 +21,13 @@ export class CreateProductDto {
   @IsInt()
   categoryId: number;
 
+  @IsArray()
+  @ArrayNotEmpty()
+  @IsString({ each: true })
+  colors: string[];
+
+  @IsArray()
+  @ArrayNotEmpty()
+  @IsString({ each: true })
+  sizes: string[];
 }
