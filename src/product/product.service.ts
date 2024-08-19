@@ -67,18 +67,9 @@ export class ProductService {
   }
 
   async createProduct(createProductDto: CreateProductDto, userId: number) {
-    const { name, description, price, stock, categoryId, colors, sizes } =
-      createProductDto;
-
+    const { name, description, price, stock, categoryId, colors, sizes,imageUrl } = createProductDto;
+  
     try {
-      // const existingProduct = await this.prismaService.product.findFirst({
-      //   where: { name },
-      // });
-
-      // if (existingProduct) {
-      //   throw new ConflictException('A product with this name already exists.');
-      // }
-
       const product = await this.prismaService.product.create({
         data: {
           name,
@@ -92,34 +83,27 @@ export class ProductService {
             connect: { id: userId },
           },
           colors: {
-            create: colors?.map((colorName) => ({ name: colorName })), // Utilisation du champ `name` pour créer les couleurs
+            create: colors?.map((colorName) => ({ name: colorName })),
           },
           sizes: {
-            create: sizes?.map((sizeValue) => ({ name: sizeValue })), // Même logique pour les tailles
+            create: sizes?.map((sizeValue) => ({ name: sizeValue })),
           },
+          imageUrl: imageUrl, // Utilisation du chemin de l'image uploadée
         },
         include: {
           colors: true,
           sizes: true,
         },
       });
-
-      if (product) {
-        return product;
-      }
+  
+      return product;
     } catch (error) {
-      if (
-        error instanceof NotFoundException ||
-        error instanceof ConflictException
-      ) {
-        throw error;
-      }
-
       throw new InternalServerErrorException(
         'An unexpected error occurred while creating the product',
       );
     }
   }
+  
 
   async updateProduct(
     productId: number,

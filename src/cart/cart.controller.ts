@@ -20,8 +20,31 @@ export class CartController {
   constructor(private readonly cartService: CartService) {}
 
   @Get()
-  async getCart(@Param('userId') userId: number) {
-    return this.cartService.getCartByUser(userId);
+  @UseGuards(JwtAuthGuard)
+  async getCart(@Req() req, @Res() res) {
+    const userId = req.user.id;
+
+    try {
+      const cart = await this.cartService.getCartByUser(userId);
+
+      if (!cart) {
+        return res.status(404).json({
+          success: false,
+          message: 'Cart not found',
+        });
+      }
+
+      return res.status(200).json({
+        success: true,
+        message: 'Cart retrieved successfully',
+        data: cart,
+      });
+    } catch (error) {
+      return res.status(500).json({
+        success: false,
+        message: 'An error occurred while retrieving the cart',
+      });
+    }
   }
 
   @Post('add')
@@ -114,7 +137,23 @@ export class CartController {
   }
 
   @Delete('clear')
-  async clearCart(@Param('userId') userId: number) {
-    return this.cartService.clearCart(userId);
+  @UseGuards(JwtAuthGuard)
+  async clearCart(@Req() req, @Res() res) {
+    const userId = req.user.id;
+  
+    try {
+      await this.cartService.clearCart(userId);
+  
+      return res.status(200).json({
+        success: true,
+        message: 'Cart cleared successfully',
+      });
+    } catch (error) {
+      return res.status(500).json({
+        success: false,
+        message: 'An error occurred while clearing the cart',
+      });
+    }
   }
+  
 }

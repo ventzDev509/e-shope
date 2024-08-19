@@ -30,6 +30,7 @@ model Product {
   description String
   price       Float
   stock       Int
+  imageUrl    String @default("")     // Field to store the image link
   categoryId  Int
   category    Category    @relation(fields: [categoryId], references: [id])
   reviews     Review[]
@@ -40,6 +41,7 @@ model Product {
   colors      Color[]     @relation("ProductColors")
   sizes       Size[]      @relation("ProductSizes")
 }
+
 
 model Color {
   id        Int     @id @default(autoincrement())

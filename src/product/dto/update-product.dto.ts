@@ -30,4 +30,8 @@ export class UpdateProductDto {
   @IsArray()
   @IsString({ each: true })
   sizes?: string[];
+
+  @IsOptional()
+  @IsString()
+  imageUrl?: string; // New field for the image URL
 }

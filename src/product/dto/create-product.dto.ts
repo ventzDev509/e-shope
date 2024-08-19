@@ -30,4 +30,8 @@ export class CreateProductDto {
   @ArrayNotEmpty()
   @IsString({ each: true })
   sizes: string[];
+
+  @IsNotEmpty()
+  @IsString()
+  imageUrl?: string;  // New field for the image link
 }

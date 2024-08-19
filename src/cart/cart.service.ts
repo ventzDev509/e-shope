@@ -95,7 +95,7 @@ export class CartService {
         message: error.message || 'Unable to add item to cart. Please try again later.',
       };
     }
-  } 
+  }  
   
   async updateCartItem(
     userId: number,
