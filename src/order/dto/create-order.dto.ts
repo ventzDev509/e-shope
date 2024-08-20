@@ -1,4 +1,12 @@
-import { IsNotEmpty, IsNumber, IsString, IsOptional, IsArray, ValidateNested } from 'class-validator';
+import { 
+  IsNotEmpty, 
+  IsNumber, 
+  IsString, 
+  IsOptional, 
+  IsArray, 
+  ValidateNested, 
+  IsDate 
+} from 'class-validator';
 import { Type } from 'class-transformer';
 
 class OrderItemDto {
@@ -12,7 +20,7 @@ class OrderItemDto {
 
   @IsNotEmpty()
   @IsNumber()
-  price: number; // Ajoutez ceci si nécessaire dans votre schéma
+  price: number;
 }
 
 class PaymentDto {
@@ -30,10 +38,6 @@ export class CreateOrderDto {
   @IsNumber()
   userId: number;
 
-  // @IsNotEmpty()
-  // @IsNumber()
-  // total: number;
-
   @IsOptional()
   @IsString()
   status?: string; // Par exemple: 'PENDING', 'COMPLETED', 'CANCELLED'
@@ -49,4 +53,9 @@ export class CreateOrderDto {
   @ValidateNested({ each: true })
   @Type(() => PaymentDto)
   payments?: PaymentDto[];
+
+  @IsOptional()
+  @IsDate()
+  @Type(() => Date)
+  estimatedDelivery?: Date; // Champ pour le temps de livraison estimé, si nécessaire
 }

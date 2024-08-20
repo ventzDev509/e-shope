@@ -9,13 +9,15 @@ import { JwtModule } from '@nestjs/jwt';
 import { usersService } from 'src/users/users.service';
 import { usersModule } from 'src/users/users.module';
 import { PasswordService } from './password.service';
+import { MailModule } from 'src/mailer/mailer.module';
 
 @Module({
-  controllers: [AuthController],
+  controllers: [AuthController,],
   providers: [AuthService, PrismaService, JwtStrategy, usersService,PasswordService],
   imports: [
     usersModule,
     PassportModule,
+    MailModule,
     JwtModule.register({
       secret: process.env.JWT_SECRET,
       signOptions: {

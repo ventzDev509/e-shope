@@ -181,4 +181,9 @@ export class ProductController {
     const userId = req.user.id;
     return this.productService.searchProductsByNameByAdmin(name, userId);
   }
+
+  @Get('category/:id')
+  async getProductsByCategory(@Param('id', ParseIntPipe) categoryId: number) {
+    return this.productService.getProductsByCategory(categoryId);
+  }
 }

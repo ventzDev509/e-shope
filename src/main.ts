@@ -1,9 +1,12 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
+import { NestExpressApplication } from '@nestjs/platform-express';
+import { join } from 'path';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule); // Notez l'utilisation de NestExpressApplication
+
   // app.useGlobalPipes(new ValidationPipe());
   const PORT=process.env.APP_PORT
   
@@ -15,7 +18,9 @@ async function bootstrap() {
     .build();
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api', app, document);
-
+  app.useStaticAssets(join(__dirname, '..', 'uploads'), {
+    prefix: '/uploads/',
+  });
   // const cors={
   //   origin: [`http://localhost:${PORT}`],
   //   methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
@@ -24,6 +29,7 @@ async function bootstrap() {
     origin: [`https://nestprojet.onrender.com:${PORT}`],
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
   }
+
   app.enableCors(cors);
  
   await app.listen(PORT);

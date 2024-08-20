@@ -1,4 +1,4 @@
-import { IsInt, IsNotEmpty, IsNumber, IsOptional, IsString, IsArray, ArrayNotEmpty } from 'class-validator';
+import { IsInt, IsNotEmpty, IsNumber, IsOptional, IsString, IsArray, ArrayNotEmpty, IsPositive } from 'class-validator';
 
 export class CreateProductDto {
   @IsNotEmpty()
@@ -11,6 +11,7 @@ export class CreateProductDto {
 
   @IsNotEmpty()
   @IsNumber()
+  @IsPositive()
   price: number;
 
   @IsNotEmpty()
@@ -33,5 +34,19 @@ export class CreateProductDto {
 
   @IsNotEmpty()
   @IsString()
-  imageUrl?: string;  // New field for the image link
+  imageUrl: string;  // New field for the image link
+
+  @IsArray()
+  @IsOptional()
+  @IsString({ each: true })
+  imageUrls?: string[];
+
+  @IsOptional()
+  @IsString()
+  offer?: string;  // New field for the offer
+
+  @IsOptional()
+  @IsNumber()
+  @IsPositive()
+  discount?: number;  // New field for the discount
 }

@@ -24,12 +24,15 @@ export class ProductService {
               id: true,
               name: true,
               email: true,
-              // Ne pas inclure le champ password
+              
             },
           },
+          colors: true,
+          sizes: true,
+          additionalImages: true,
         },
       });
-
+  
       return products;
     } catch (error) {
       throw new InternalServerErrorException(
@@ -37,6 +40,7 @@ export class ProductService {
       );
     }
   }
+  
 
   async getProductsByAdmin(userId: number) {
     const user = await this.prismaService.user.findUnique({
@@ -46,30 +50,52 @@ export class ProductService {
         name: true,
         email: true,
         role: true,
-        // Ne pas inclure le champ password
       },
     });
-
+  
     if (!user || user.role !== UserRole.ADMIN) {
       throw new ForbiddenException(
         'You do not have permission to view these products.',
       );
     }
-
+  
     const products = await this.prismaService.product.findMany({
       where: { createdBy: userId },
       include: {
         category: true, // Inclure les informations de catégorie si nécessaire
+
+       
       },
     });
-
+  
     return products;
   }
-
+  
   async createProduct(createProductDto: CreateProductDto, userId: number) {
-    const { name, description, price, stock, categoryId, colors, sizes,imageUrl } = createProductDto;
+    const {
+      name,
+      description,
+      price,
+      stock,
+      categoryId,
+      colors,
+      sizes,
+      imageUrl,
+      imageUrls,
+      offer, // Nouveau champ
+      discount, // Nouveau champ
+    } = createProductDto;
   
     try {
+      // Vérifier si la catégorie existe
+      const category = await this.prismaService.category.findUnique({
+        where: { id: categoryId },
+      });
+  
+      if (!category) {
+        throw new NotFoundException(`Category with ID ${categoryId} not found`);
+      }
+  
       const product = await this.prismaService.product.create({
         data: {
           name,
@@ -88,11 +114,17 @@ export class ProductService {
           sizes: {
             create: sizes?.map((sizeValue) => ({ name: sizeValue })),
           },
-          imageUrl: imageUrl, // Utilisation du chemin de l'image uploadée
+          imageUrl, // Image principale
+          additionalImages: {
+            create: imageUrls?.map((url) => ({ imageUrls: url })),
+          },
+          offer, // Ajouter le champ `offer`
+          discount, // Ajouter le champ `discount`
         },
         include: {
           colors: true,
           sizes: true,
+          additionalImages: true,
         },
       });
   
@@ -110,46 +142,58 @@ export class ProductService {
     updateProductDto: UpdateProductDto,
     userId: number,
   ) {
-    const { name, description, price, stock, categoryId, colors, sizes } =
-      updateProductDto;
-
+    const {
+      name,
+      description,
+      price,
+      stock,
+      categoryId,
+      colors,
+      sizes,
+      imageUrls,
+      offer, // Nouveau champ
+      discount, // Nouveau champ
+    } = updateProductDto;
+  
     try {
       const user = await this.prismaService.user.findUnique({
         where: { id: userId },
       });
-
+  
       if (!user) {
         throw new ForbiddenException('User not found.');
       }
-
+  
       if (user.role !== UserRole.ADMIN) {
         throw new ForbiddenException(
           'You do not have permission to update this product.',
         );
       }
-
+  
       const product = await this.prismaService.product.findUnique({
         where: { id: productId },
       });
-
+  
       if (!product) {
         throw new NotFoundException('Product not found');
       }
-
+  
       if (product.createdBy !== userId) {
         throw new ForbiddenException(
           'You do not have permission to update this product.',
         );
       }
-
-      // const existingProduct = await this.prismaService.product.findFirst({
-      //   where: { name },
-      // });
-
-      // if (existingProduct && existingProduct.id !== productId) {
-      //   throw new ConflictException('A product with this name already exists.');
-      // }
-
+  
+      // Vérifier si la catégorie existe
+      const category = await this.prismaService.category.findUnique({
+        where: { id: categoryId },
+      });
+  
+      if (!category) {
+        throw new NotFoundException(`Category with ID ${categoryId} not found`);
+      }
+  
+      // Mettre à jour les données principales du produit
       const updatedProduct = await this.prismaService.product.update({
         where: { id: productId },
         data: {
@@ -161,18 +205,39 @@ export class ProductService {
             connect: { id: categoryId },
           },
           colors: {
-            create: colors?.map((colorName) => ({ name: colorName })), // Utilisation du champ `name` pour créer les couleurs
+            deleteMany: {}, // Supprimer les couleurs existantes
+            create: colors?.map((colorName) => ({ name: colorName })), // Ajouter de nouvelles couleurs
           },
           sizes: {
-            create: sizes?.map((sizeValue) => ({ name: sizeValue })), // Même logique pour les tailles
+            deleteMany: {}, // Supprimer les tailles existantes
+            create: sizes?.map((sizeValue) => ({ name: sizeValue })), // Ajouter de nouvelles tailles
           },
+          offer, // Mettre à jour le champ `offer`
+          discount, // Mettre à jour le champ `discount`
         },
         include: {
           colors: true,
           sizes: true,
+          additionalImages: true, // Inclure les images associées
         },
       });
-
+  
+      // Mettre à jour les images du produit
+      if (imageUrls && imageUrls.length > 0) {
+        // Supprimer les images existantes
+        await this.prismaService.productImage.deleteMany({
+          where: { productId: productId },
+        });
+  
+        // Créer de nouvelles images
+        await this.prismaService.productImage.createMany({
+          data: imageUrls.map((url) => ({
+            imageUrls: url,
+            productId: updatedProduct.id,
+          })),
+        });
+      }
+  
       return updatedProduct;
     } catch (error) {
       if (
@@ -182,13 +247,13 @@ export class ProductService {
       ) {
         throw error;
       }
-
+  
       throw new InternalServerErrorException(
         'An unexpected error occurred while updating the product',
       );
     }
   }
-
+  
   async deleteProduct(productId: number, userId: number) {
     try {
       const product = await this.prismaService.product.findUnique({
@@ -236,6 +301,7 @@ export class ProductService {
       include: {
         colors: true,
         sizes: true,
+        additionalImages: true,
       },
     });
 
@@ -267,5 +333,47 @@ export class ProductService {
     }
 
     return products;
+  }
+
+  async getProductsByCategory(categoryId: number) {
+    try {
+      const category = await this.prismaService.category.findUnique({
+        where: { id: categoryId },
+      });
+
+      if (!category) {
+        throw new NotFoundException(`Category with ID ${categoryId} not found`);
+      }
+
+      const products = await this.prismaService.product.findMany({
+        where: { categoryId: categoryId },
+        include: {
+          category: true,
+          colors: true,
+          sizes: true,
+          additionalImages: true,
+          admin: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          },
+        },
+      });
+
+      if (products.length === 0) {
+        throw new NotFoundException(`No products found for category with ID ${categoryId}`);
+      }
+
+      return products;
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new InternalServerErrorException(
+        'An unexpected error occurred while fetching products by category',
+      );
+    }
   }
 }

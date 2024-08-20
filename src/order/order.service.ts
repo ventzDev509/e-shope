@@ -2,9 +2,11 @@ import {
   Injectable,
   NotFoundException,
   InternalServerErrorException,
+  BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateOrderDto } from './dto/create-order.dto';
+import { addDays } from 'date-fns'; // Pour calculer la date de livraison estimée
 
 @Injectable()
 export class OrderService {
@@ -24,7 +26,7 @@ export class OrderService {
         throw new NotFoundException('User not found');
       }
 
-      // Calcul du total de la commande en fonction des items
+      // Calcul du total de la commande et mise à jour du stock des produits
       let total = 0;
 
       for (const item of items) {
@@ -38,14 +40,30 @@ export class OrderService {
           );
         }
 
+        if (product.stock < item.quantity) {
+          throw new BadRequestException(
+            `Not enough stock for product ${product.name}. Available stock: ${product.stock}`,
+          );
+        }
+
+        // Mettre à jour le stock du produit
+        await this.prismaService.product.update({
+          where: { id: product.id },
+          data: { stock: product.stock - item.quantity },
+        });
+
         total += item.price * item.quantity;
       }
+
+      // Calculer la date de livraison estimée (une semaine à partir de maintenant)
+      const estimatedDelivery = addDays(new Date(), 7);
 
       // Crée la commande
       const order = await this.prismaService.order.create({
         data: {
           total,
           status: status || 'PENDING',
+          estimatedDelivery, // Ajout du temps de livraison estimé
           user: {
             connect: { id: userId },
           },
@@ -70,7 +88,7 @@ export class OrderService {
 
       return order;
     } catch (error) {
-      if (error instanceof NotFoundException) {
+      if (error instanceof NotFoundException || error instanceof BadRequestException) {
         throw error;
       }
 
@@ -82,18 +100,18 @@ export class OrderService {
     }
   }
 
-  // Method to retrieve all orders
+  // Méthode pour récupérer toutes les commandes
   async getAllOrders() {
     try {
       const orders = await this.prismaService.order.findMany({
         include: {
-          items: true, // Include order items
-          payments: true, // Include payments
-          user: true, // Include user information
+          items: true, // Inclure les items de la commande
+          payments: true, // Inclure les paiements
+          user: true, // Inclure les informations de l'utilisateur
         },
       });
 
-      // Remove the `password` and the `role` field from each user's data in the orders
+      // Supprimer les champs `password` et `role` des données de l'utilisateur dans les commandes
       orders.forEach((order) => {
         if (order.user) {
           delete order.user.password;
@@ -108,8 +126,9 @@ export class OrderService {
       );
     }
   }
+
+  // Méthode pour récupérer une commande par son ID
   async getOrderById(orderId: number) {
-    // Vérifie si la commande existe
     const order = await this.prismaService.order.findUnique({
       where: { id: orderId },
       include: { items: true, payments: true }, // Inclure les items et paiements si nécessaire
@@ -121,16 +140,18 @@ export class OrderService {
 
     return order;
   }
+
+  // Méthode pour récupérer les commandes d'un utilisateur
   async getOrderByUserId(userId: number) {
-    // Vérifie si la commande existe
-    const order = await this.prismaService.order.findMany({
+    const orders = await this.prismaService.order.findMany({
       where: { userId: userId },
       include: { items: true, payments: true }, // Inclure les items et paiements si nécessaire
     });
 
-    if (order.length === 0) {
+    if (orders.length === 0) {
       throw new NotFoundException(`No orders found for user with ID ${userId}`);
     }
-    return order;
+
+    return orders;
   }
 }
