@@ -26,7 +26,7 @@ async function bootstrap() {
   //   methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
   // }
   const cors={
-    origin: [`https://e-shope-r30g.onrender.com:${PORT}`],
+    origin: [`https://e-shope-r30g.onrender.com:${5173}`],
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
   }
 
