@@ -15,12 +15,12 @@ export class MailService {
             pass: '8mSt4Uq6V3Q5DFuhRc'
         }
     });
-  }
+  } 
 
   async sendPasswordResetEmail(to: string, token: string) {
     const resetLink = `http://localhost:3000/auth/reset-password?token=${token}&email=${to}`;
     const mailOptions = {
-      from: 'Auth-backend service',
+      from: 'ali-haiti',
       to: to,
       subject: 'Password Reset Request',
       html: `<p>You requested a password reset. Click the link below to reset your password:</p><p><a href="${resetLink}">Reset Password</a></p>`,
