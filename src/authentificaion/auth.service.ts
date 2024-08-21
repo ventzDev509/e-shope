@@ -87,7 +87,7 @@ export class AuthService {
         resetPasswordExpires: new Date(Date.now() + 3600000), // 1 heure
       },
     });
-
+ 
     // Générer l'URL de réinitialisation
     const resetUrl = `http://yourfrontend.com/reset-password?token=${resetToken}&email=${email}`;
 

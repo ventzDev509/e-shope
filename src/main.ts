@@ -21,14 +21,14 @@ async function bootstrap() {
   app.useStaticAssets(join(__dirname, '..', 'uploads'), {
     prefix: '/uploads/',
   });
-  const cors={ 
-    origin: [`http://localhost:${5173}`],
-    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
-  }
-  // const cors={
-  //   origin: [`https://nestprojet.onrender.com:${PORT}`],
+  // const cors={ 
+  //   origin: [`http://localhost:${5173}`],
   //   methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
   // }
+  const cors={
+    origin: [`https://e-shope-r30g.onrender.com:${PORT}`],
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+  }
 
   app.enableCors(cors);
  
