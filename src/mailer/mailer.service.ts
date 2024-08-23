@@ -8,24 +8,24 @@ export class MailService {
 
   constructor() {
     this.transporter = nodemailer.createTransport({
-        host: 'smtp.ethereal.email',
+        host: 'smtp.gmail.com',
         port: 587,
         auth: {
-            user: 'jordyn49@ethereal.email',
-            pass: '8mSt4Uq6V3Q5DFuhRc'
+            user: 'eventzmarceille190@gmail.com',
+            pass: 'tzqwakgcyvtmvlmd'
         }
     });
   } 
-
+ 
   async sendPasswordResetEmail(to: string, token: string) {
     const resetLink = `http://localhost:3000/auth/reset-password?token=${token}&email=${to}`;
     const mailOptions = {
-      from: 'ali-haiti',
+      from: 'carribean-cart <eventzmarceille@gmail>',
       to: to,
       subject: 'Password Reset Request',
       html: `<p>You requested a password reset. Click the link below to reset your password:</p><p><a href="${resetLink}">Reset Password</a></p>`,
     };
-
+    
     await this.transporter.sendMail(mailOptions);
   }
 }

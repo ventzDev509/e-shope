@@ -88,9 +88,7 @@ export class AuthService {
       },
     });
  
-    // Générer l'URL de réinitialisation
-    const resetUrl = `http://yourfrontend.com/reset-password?token=${resetToken}&email=${email}`;
-
+   
     // Envoyer l'email de réinitialisation de mot de passe
     await this.mailerService.sendPasswordResetEmail(user.email, resetToken);
 

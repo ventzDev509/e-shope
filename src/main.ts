@@ -22,14 +22,14 @@ async function bootstrap() {
     prefix: '/uploads/',
   });
   const cors={ 
-    origin: [`http://localhost:${5173}`],
+    origin: [`http://gh.free.nf`],
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
   }
   // const cors={
   //   origin: [`https://e-shope-r30g.onrender.com:${PORT}`],
   //   methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
   // }
-
+ 
   app.enableCors(cors);
  
   await app.listen(PORT);
