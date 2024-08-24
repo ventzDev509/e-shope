@@ -20,7 +20,7 @@ async function bootstrap() {
   SwaggerModule.setup('api', app, document);
   app.useStaticAssets(join(__dirname, '..', 'uploads'), {
     prefix: '/uploads/',
-  });
+  }); 
   const cors={ 
     origin: [`http://gh.free.nf`],
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',

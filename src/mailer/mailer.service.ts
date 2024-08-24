@@ -18,7 +18,7 @@ export class MailService {
   } 
  
   async sendPasswordResetEmail(to: string, token: string) {
-    const resetLink = `http://localhost:3000/auth/reset-password?token=${token}&email=${to}`;
+    const resetLink = `https://e-shope-r30g.onrender.com/auth/reset-password?token=${token}&email=${to}`;
     const mailOptions = {
       from: 'carribean-cart <eventzmarceille@gmail>',
       to: to,
