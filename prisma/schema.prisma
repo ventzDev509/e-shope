@@ -8,17 +8,21 @@ generator client {
 }
 
 model User {
-  id                    Int       @id @default(autoincrement())
-  name                  String
-  email                 String    @unique
-  password              String
-  role                  UserRole  @default(CUSTOMER) // Utilisation de l'énum avec valeur par défaut
-  resetPasswordToken    String?   @unique
-  resetPasswordExpires  DateTime?
-  orders                Order[]
-  cart                  Cart?
-  reviews               Review[]
-  products              Product[]
+  id                   Int       @id @default(autoincrement())
+  name                 String
+  email                String    @unique
+  profile              String
+  password             String
+  role                 UserRole  @default(CUSTOMER) // Utilisation de l'énum avec valeur par défaut
+  resetPasswordToken   String?   @unique
+  resetPasswordExpires DateTime?
+  orders               Order[]
+  cart                 Cart?
+  reviews              Review[]
+  products             Product[]
+  Address              Address[]
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
 }
 
 enum UserRole {
@@ -27,30 +31,33 @@ enum UserRole {
 }
 
 model Product {
-  id               Int           @id @default(autoincrement())
+  id               Int            @id @default(autoincrement())
   name             String
   description      String
   price            Float
   stock            Int
-  imageUrl         String        @default("")     // Field to store the image link
+  imageUrl         String         @default("") // Field to store the image link
   categoryId       Int
-  category         Category      @relation(fields: [categoryId], references: [id])
+  category         Category       @relation(fields: [categoryId], references: [id])
   reviews          Review[]
   cartItems        CartItem[]
+  cyloneOffer      CyloneOffer[]
   orderItems       OrderItem[]
   createdBy        Int
-  admin            User          @relation(fields: [createdBy], references: [id])
-  colors           Color[]       @relation("ProductColors")
-  sizes            Size[]        @relation("ProductSizes")
+  admin            User           @relation(fields: [createdBy], references: [id])
+  colors           Color[]        @relation("ProductColors")
+  sizes            Size[]         @relation("ProductSizes")
   additionalImages ProductImage[] // Relation to additional images
-  offer            String?       // Champs pour ajouter une offre spéciale, facultatif
-  discount         Float?        // Champs pour ajouter un rabais, facultatif
+  offer            String? // Champs pour ajouter une offre spéciale, facultatif
+  discount         Float? // Champs pour ajouter un rabais, facultatif
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  OffreVisible     OffreVisible[]
 }
-
 
 model ProductImage {
   id        Int     @id @default(autoincrement())
-  imageUrls  String
+  imageUrls String
   productId Int
   product   Product @relation(fields: [productId], references: [id])
 }
@@ -70,31 +77,39 @@ model Size {
 }
 
 model Category {
-  id       Int       @id @default(autoincrement())
-  name     String    @unique
-  products Product[]
+  id        Int       @id @default(autoincrement())
+  name      String    @unique
+  imageUrl  String
+  products  Product[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 }
 
 model Order {
-  id                 Int         @id @default(autoincrement())
-  total              Float
-  status             String      @default("PENDING") // PENDING, COMPLETED, CANCELLED
-  userId             Int
-  user               User        @relation(fields: [userId], references: [id])
-  items              OrderItem[]
-  payments           Payment[]
-  estimatedDelivery  DateTime?   // Champ pour stocker le temps de livraison estimé
+  id                Int         @id @default(autoincrement())
+  total             Float
+  status            String      @default("PENDING") // PENDING, COMPLETED, CANCELLED
+  userId            Int
+  user              User        @relation(fields: [userId], references: [id])
+  items             OrderItem[]
+  payments          Payment[]
+  estimatedDelivery DateTime? // Champ pour stocker le temps de livraison estimé
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
 }
 
-
 model OrderItem {
-  id        Int     @id @default(autoincrement())
+  id        Int      @id @default(autoincrement())
   quantity  Int
   price     Float
   productId Int
-  product   Product @relation(fields: [productId], references: [id])
+  product   Product  @relation(fields: [productId], references: [id])
   orderId   Int
-  order     Order   @relation(fields: [orderId], references: [id])
+  order     Order    @relation(fields: [orderId], references: [id])
+  colors    String // Chaîne délimitée pour les couleurs, ex: "red,blue,green"
+  sizes     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Cart {
@@ -105,29 +120,65 @@ model Cart {
 }
 
 model CartItem {
-  id        Int     @id @default(autoincrement())
+  id        Int      @id @default(autoincrement())
   quantity  Int
   productId Int
-  product   Product @relation(fields: [productId], references: [id])
+  product   Product  @relation(fields: [productId], references: [id])
   cartId    Int
-  cart      Cart    @relation(fields: [cartId], references: [id])
+  cart      Cart     @relation(fields: [cartId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Review {
-  id        Int     @id @default(autoincrement())
+  id        Int      @id @default(autoincrement())
   rating    Int
   comment   String?
   productId Int
-  product   Product @relation(fields: [productId], references: [id])
+  product   Product  @relation(fields: [productId], references: [id])
   userId    Int
-  user      User    @relation(fields: [userId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Payment {
-  id      Int    @id @default(autoincrement())
-  amount  Float 
-  method  String @default("moncash") // Ajoutez ce champ pour indiquer le mode de paiement
-  status  String @default("PENDING") // PENDING, COMPLETED, FAILED
-  orderId Int
-  order   Order  @relation(fields: [orderId], references: [id])
+  id        Int      @id @default(autoincrement())
+  amount    Float
+  method    String   @default("moncash") // Ajoutez ce champ pour indiquer le mode de paiement
+  status    String   @default("PENDING") // PENDING, COMPLETED, FAILED
+  orderId   Int
+  order     Order    @relation(fields: [orderId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Address {
+  id        Int      @id @default(autoincrement())
+  street    String
+  city      String
+  state     String
+  zipCode   String
+  country   String
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// site config 
+model Caroussel {
+  id       Int    @id @default(autoincrement())
+  imageUrl String
+}
+
+model OffreVisible {
+  id        Int     @id @default(autoincrement())
+  productId Int
+  product   Product @relation(fields: [productId], references: [id])
+}
+model CyloneOffer {
+  id        Int     @id @default(autoincrement())
+  productId Int
+  product   Product @relation(fields: [productId], references: [id])
 }

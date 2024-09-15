@@ -3,17 +3,20 @@ import {
   NotFoundException,
   InternalServerErrorException,
   BadRequestException,
+  ForbiddenException,
+  ConflictException,
 } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { addDays } from 'date-fns'; // Pour calculer la date de livraison estimée
+import { UserRole } from '@prisma/client';
 
 @Injectable()
 export class OrderService {
   constructor(private readonly prismaService: PrismaService) {}
 
-  async createOrder(createOrderDto: CreateOrderDto) {
-    const { userId, status, items, payments } = createOrderDto;
+  async createOrder(createOrderDto: CreateOrderDto, userId: number) {
+    const { status, items, payments } = createOrderDto;
 
     try {
       // Vérifie si l'utilisateur existe
@@ -74,6 +77,8 @@ export class OrderService {
               },
               quantity: item.quantity,
               price: item.price,
+              colors: item.colors ? item.colors.join(',') : '', // Concaténer les couleurs en chaîne
+              sizes: item.sizes ? item.sizes.join(',') : '', // Concaténer les tailles en chaîne
             })),
           },
           payments: {
@@ -81,14 +86,21 @@ export class OrderService {
           },
         },
         include: {
-          items: true,
+          items: {
+            include: {
+              product: true, // Inclure les détails du produit dans les items
+            },
+          },
           payments: true,
         },
       });
 
       return order;
     } catch (error) {
-      if (error instanceof NotFoundException || error instanceof BadRequestException) {
+      if (
+        error instanceof NotFoundException ||
+        error instanceof BadRequestException
+      ) {
         throw error;
       }
 
@@ -105,7 +117,15 @@ export class OrderService {
     try {
       const orders = await this.prismaService.order.findMany({
         include: {
-          items: true, // Inclure les items de la commande
+          items: {
+            include: {
+              product: {
+                include: {
+                  additionalImages: true, // Inclure les images du produit
+                },
+              },
+            },
+          },
           payments: true, // Inclure les paiements
           user: true, // Inclure les informations de l'utilisateur
         },
@@ -131,7 +151,20 @@ export class OrderService {
   async getOrderById(orderId: number) {
     const order = await this.prismaService.order.findUnique({
       where: { id: orderId },
-      include: { items: true, payments: true }, // Inclure les items et paiements si nécessaire
+      include: {
+        items: {
+          include: {
+            product: {
+              include: {
+                additionalImages: false, // Inclure les images du produit
+                sizes: true,
+                colors: true,
+              },
+            },
+          },
+        },
+        payments: true, // Inclure les paiements
+      },
     });
 
     if (!order) {
@@ -143,15 +176,116 @@ export class OrderService {
 
   // Méthode pour récupérer les commandes d'un utilisateur
   async getOrderByUserId(userId: number) {
-    const orders = await this.prismaService.order.findMany({
-      where: { userId: userId },
-      include: { items: true, payments: true }, // Inclure les items et paiements si nécessaire
-    });
+    try {
+      const orders = await this.prismaService.order.findMany({
+        where: { userId: userId },
+        include: {
+          items: {
+            include: {
+              product: {
+                include: {
+                  sizes: true,
+                  colors: true,
+                  additionalImages: false, // Inclure les images du produit
+                },
+              },
+            },
+          },
 
-    if (orders.length === 0) {
-      throw new NotFoundException(`No orders found for user with ID ${userId}`);
+          payments: true, // Inclure les paiements
+          user: true, // Inclure l'utilisateur
+        },
+      });
+
+      if (orders.length === 0) {
+        throw new NotFoundException(
+          `No orders found for user with ID ${userId}`,
+        );
+      }
+      return orders;
+    } catch (error) {
+      throw new InternalServerErrorException(
+        'An unexpected error occurred while retrieving the user orders',
+      );
     }
+  }
+  // get order by status
+  async getOrderByStatus(status: string, userId: number) {
+    try {
+      const orders = await this.prismaService.order.findMany({
+        where: { status: status, userId: userId },
+        include: {
+          items: {
+            include: {
+              product: {
+                include: {
+                  sizes: true,
+                  colors: true,
+                  additionalImages: false, // Inclure les images du produit
+                },
+              },
+            },
+          },
 
-    return orders;
+          payments: true, // Inclure les paiements
+          user: true, // Inclure l'utilisateur
+        },
+      });
+
+      if (orders.length === 0) {
+        throw new NotFoundException(
+          `No orders found for user with ID ${userId}`,
+        );
+      }
+      return orders;
+    } catch (error) {
+      throw new InternalServerErrorException(
+        'An unexpected error occurred while retrieving the user orders',
+      );
+    }
+  }
+
+  async updateOrderStatus(id: number, status: string, userId: number) {
+    try {
+      const user = await this.prismaService.user.findUnique({
+        where: { id: userId },
+      });
+
+      if (!user) {
+        throw new ForbiddenException('User not found.');
+      }
+
+      if (user.role !== UserRole.ADMIN) {
+        throw new ForbiddenException(
+          'You do not have permission to update this Order.',
+        );
+      }
+      const order = await this.prismaService.order.findUnique({
+        where: { id: id },
+      });
+      if (!order) {
+        throw new NotFoundException('order not found');
+      }
+
+      const response = await this.prismaService.order.update({
+        where: { id: id },
+        data: {
+          status: status,
+        },
+      });
+      return response;
+    } catch (error) {
+      if (
+        error instanceof NotFoundException ||
+        error instanceof ConflictException ||
+        error instanceof ForbiddenException
+      ) {
+        throw error;
+      }
+
+      throw new InternalServerErrorException(
+        'An unexpected error occurred while updating the product',
+      );
+    }
   }
 }

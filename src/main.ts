@@ -22,7 +22,7 @@ async function bootstrap() {
     prefix: '/uploads/',
   }); 
   const cors={ 
-    origin: [`http://gh.free.nf`],
+    origin: [`http://localhost:5173`],
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
   }
   // const cors={

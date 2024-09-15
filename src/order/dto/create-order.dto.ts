@@ -21,6 +21,18 @@ class OrderItemDto {
   @IsNotEmpty()
   @IsNumber()
   price: number;
+
+  // Ajout du champ colors (tableau de chaînes)
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  colors?: string[];
+
+  // Ajout du champ sizes (tableau de chaînes)
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  sizes?: string[];
 }
 
 class PaymentDto {
@@ -34,10 +46,6 @@ class PaymentDto {
 }
 
 export class CreateOrderDto {
-  @IsNotEmpty()
-  @IsNumber()
-  userId: number;
-
   @IsOptional()
   @IsString()
   status?: string; // Par exemple: 'PENDING', 'COMPLETED', 'CANCELLED'

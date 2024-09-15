@@ -34,12 +34,15 @@ export class ProductController {
   async getAllProduct() {
     return await this.productService.getAllProducts();
   }
+  @Get(':id')
+  async getAllProductById(@Param('id', ParseIntPipe) productId: number) {
+    return await this.productService.getProductById(productId);
+  }
 
   @Get('admin')
   @UseGuards(JwtAuthGuard)
-  async getProductsByAdmin(@Req() req, @Res() res) {
+  async getProductsByAdmin(@Req() req, @Res() res) { 
     const userId = req.user.id;
-
     try {
       const products = await this.productService.getProductsByAdmin(userId);
       return res.status(HttpStatus.OK).json(products);
@@ -48,21 +51,21 @@ export class ProductController {
       if (error instanceof HttpException) {
         return res.status(error.getStatus()).json({ message: error.message });
       }
-
       // Handle unexpected errors
       return res
         .status(HttpStatus.INTERNAL_SERVER_ERROR)
         .json({ message: 'An unexpected error occurred' });
     }
   }
-
   @Post('image')
   @UseInterceptors(
     FileInterceptor('image', {
       storage: diskStorage({
         destination: './uploads', // Dossier où les images seront stockées
         filename: (req, file, cb) => {
-          const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+          // Générer un nom de fichier unique en utilisant la date et un identifiant aléatoire
+          const uniqueSuffix =
+            Date.now() + '-' + Math.round(Math.random() * 1e9);
           const ext = extname(file.originalname);
           const filename = `${file.fieldname}-${uniqueSuffix}${ext}`;
           cb(null, filename);
@@ -82,12 +85,17 @@ export class ProductController {
       throw new BadRequestException('No file uploaded');
     }
 
+    // Construire l'URL complète de l'image téléchargée
+    const baseUrl = process.env.UPLOAD_LINK; // Remplacez par l'URL de votre serveur
+    const imageUrl = `${baseUrl}/uploads/${file.filename}`;
+
     return {
       message: 'Image uploaded successfully',
       filePath: file.path,
+      fileName: file.filename,
+      imageUrl: imageUrl, // Retourner l'URL complète de l'image
     };
   }
-
 
   @Post()
   @UseGuards(JwtAuthGuard)
@@ -99,8 +107,6 @@ export class ProductController {
   ) {
     const userId = req.user.id; // Assuming user ID is available in the request
     const imagePath = file?.path; // Get the file path from the uploaded file
-
-   
 
     try {
       const product = await this.productService.createProduct(

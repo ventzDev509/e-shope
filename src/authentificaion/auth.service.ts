@@ -87,41 +87,55 @@ export class AuthService {
         resetPasswordExpires: new Date(Date.now() + 3600000), // 1 heure
       },
     });
- 
-   
+
     // Envoyer l'email de réinitialisation de mot de passe
     await this.mailerService.sendPasswordResetEmail(user.email, resetToken);
 
     return { message: 'Password reset link sent to your email.' };
   }
 
-  async resetPassword(resetPasswordDto: ResetPasswordDto,token:string,email:string) {
-    const {newPassword } = resetPasswordDto;
+  async resetPassword(
+    resetPasswordDto: ResetPasswordDto,
+    token: string,
+    email: string,
+  ) {
+    const { newPassword } = resetPasswordDto;
 
-    const user = await this.prismaService.user.findUnique({ where: { email } });
+    try {
+      const user = await this.prismaService.user.findUnique({
+        where: { email },
+      });
 
-    if (!user || !user.resetPasswordToken) {
-      throw new NotFoundException('Invalid or expired reset token');
+      if (!user || !user.resetPasswordToken) {
+        throw new NotFoundException('Invalid or expired reset token');
+      }
+
+      const isTokenValid = await bcrypt.compare(token, user.resetPasswordToken);
+
+      if (!isTokenValid) {
+        throw new BadRequestException('Invalid or expired reset token');
+      }
+
+      // Réinitialiser le mot de passe
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+      await this.prismaService.user.update({
+        where: { email },
+        data: {
+          password: hashedPassword,
+          resetPasswordToken: null,
+          resetPasswordExpires: null,
+        },
+      });
+
+      return { message: 'Password successfully reset.' };
+    } catch (error) {
+      if (error instanceof ConflictException) {
+        throw error;
+      }
+      throw new InternalServerErrorException(
+        'An unexpected error occurred while creating the user',
+      );
     }
-
-    const isTokenValid = await bcrypt.compare(token, user.resetPasswordToken);
-
-    if (!isTokenValid) {
-      throw new BadRequestException('Invalid or expired reset token');
-    }
-
-    // Réinitialiser le mot de passe
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
-
-    await this.prismaService.user.update({
-      where: { email },
-      data: {
-        password: hashedPassword,
-        resetPasswordToken: null,
-        resetPasswordExpires: null,
-      },
-    });
-
-    return { message: 'Password successfully reset.' };
   }
 }

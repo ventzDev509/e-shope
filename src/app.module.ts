@@ -11,6 +11,8 @@ import { CategoriesModule } from './categories/categories.module';
 import { OrderModule } from './order/order.module';
 import { CartModule } from './cart/cart.module';
 import { MailModule } from './mailer/mailer.module';
+import { AddressModule } from './address/address.module';
+import { CarousselModule } from './caroussel/caroussel.module';
 
 @Module({
   imports: [
@@ -23,6 +25,8 @@ import { MailModule } from './mailer/mailer.module';
     OrderModule,
     CartModule,
     MailModule,
+    AddressModule,
+    CarousselModule,
   ],
   providers: [ 
     {

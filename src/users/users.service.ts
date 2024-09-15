@@ -20,7 +20,7 @@ export class usersService {
   ) {}
   async create(createUserDto: CreateUserDto) {
     const { name, email, password, role } = createUserDto;
-
+ 
     try {
       // Vérifie si l'utilisateur existe déjà
       const existingUser = await this.prisma.user.findUnique({
@@ -37,27 +37,22 @@ export class usersService {
       // Créer un utilisateur dans la base de données
       const user = await this.prisma.user.create({
         data: {
-          name,
+          name, 
           email,
           password: hashedPassword,
           role: role || UserRole.CUSTOMER,
+          profile:""
         },
       });
 
       return user;
-    } catch (error) {
-      if (error instanceof PrismaClientKnownRequestError) {
-        if (
-          error.code === 'P2002' &&
-          (error.meta?.target as string[])?.includes('email')
-        ) {
-          throw new ConflictException({
-            message: "L'email existe déjà",
-            statusCode: 409,
-          });
-        }
+    } catch (error) { 
+      if (error instanceof ConflictException) {
+        throw error;
       }
-      throw new Error("Erreur lors de la création de l'user");
+      throw new InternalServerErrorException(
+        'An unexpected error occurred while creating the user',
+      );
     }
   }
  
