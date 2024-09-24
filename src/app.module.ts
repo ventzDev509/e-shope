@@ -13,6 +13,8 @@ import { CartModule } from './cart/cart.module';
 import { MailModule } from './mailer/mailer.module';
 import { AddressModule } from './address/address.module';
 import { CarousselModule } from './caroussel/caroussel.module';
+import { OffreVisibleModule } from './offre-visible/offre-visible.module';
+import { PaymentsModule } from './payments/payments.module';
 
 @Module({
   imports: [
@@ -27,6 +29,8 @@ import { CarousselModule } from './caroussel/caroussel.module';
     MailModule,
     AddressModule,
     CarousselModule,
+    OffreVisibleModule,
+    PaymentsModule,
   ],
   providers: [ 
     {

@@ -23,7 +23,6 @@ export class CartController {
   @UseGuards(JwtAuthGuard)
   async getCart(@Req() req, @Res() res) {
     const userId = req.user.id;
-
     try {
       const cart = await this.cartService.getCartByUser(userId);
 
@@ -33,7 +32,7 @@ export class CartController {
           message: 'Cart not found',
         });
       }
-
+   
       return res.status(200).json({
         success: true,
         message: 'Cart retrieved successfully',
@@ -55,7 +54,6 @@ export class CartController {
     @Res() res,
   ) {
     const userId = req.user.id;
-
     try {
       const result = await this.cartService.addItemToCart(
         userId,
@@ -80,7 +78,7 @@ export class CartController {
     }
   }
 
-  @Patch('update/:cartItemId')
+  @Patch(':cartItemId')
   @UseGuards(JwtAuthGuard)
   async updateCartItem(
     @Param('cartItemId') cartItemId: string,
@@ -98,7 +96,7 @@ export class CartController {
         updateCartItemDto,
       );
 
-      return res.status(200).json({
+      return res.status(200).json({ 
         success: true,
         message: 'Cart item updated successfully',
         data: updatedItem,
@@ -111,7 +109,7 @@ export class CartController {
     }
   }
 
-  @Delete('remove/:cartItemId')
+  @Delete(':cartItemId')
   @UseGuards(JwtAuthGuard)
   async removeCartItem(
     @Param('cartItemId') cartItemId: string,
@@ -136,14 +134,12 @@ export class CartController {
     }
   }
 
-  @Delete('clear')
+  @Delete('/clear')
   @UseGuards(JwtAuthGuard)
   async clearCart(@Req() req, @Res() res) {
     const userId = req.user.id;
-  
     try {
       await this.cartService.clearCart(userId);
-  
       return res.status(200).json({
         success: true,
         message: 'Cart cleared successfully',

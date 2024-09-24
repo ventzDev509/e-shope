@@ -78,7 +78,6 @@ export class CategoriesService {
 
       return updatedCategory;
     } catch (error) {
-      console.log(error)
       if (error instanceof NotFoundException) {
         throw error; // Catégorie non trouvée
       } else {

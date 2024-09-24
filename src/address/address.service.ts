@@ -8,19 +8,22 @@ export class AddressService {
   constructor(private readonly prismaService: PrismaService) {}
 
   async createAddress(createAddressDto: CreateAddressDto, userId: number) {
-    return this.prismaService.address.create({
+    return await this.prismaService.address.create({
       data: {
         ...createAddressDto,
         user: {
           connect: { id: userId },
         },
+        country:"haiti",
+        state:"",
+        zipCode:""
       },
     });
   }
 
   async getUserAddresses(userId: number) {
     return this.prismaService.address.findMany({
-      where: { userId },
+      where: { userId }, 
     });
   }
 

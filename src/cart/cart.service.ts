@@ -27,7 +27,7 @@ export class CartService {
   }
 
   async addItemToCart(userId: number, createCartItemDto: CreateCartItemDto) {
-    const { productId, quantity } = createCartItemDto;
+    const { productId, quantity,colors,sizes } = createCartItemDto;
   
     try {
       // Check if the product exists
@@ -52,36 +52,38 @@ export class CartService {
         });
       }
   
-      // Check if the item already exists in the cart
-      const existingCartItem = await this.prisma.cartItem.findFirst({
-        where: {
-          cartId: cart.id,
-          productId,
-        },
-      });
+      // // Check if the item already exists in the cart
+      // const existingCartItem = await this.prisma.cartItem.findFirst({
+      //   where: {
+      //     cartId: cart.id,
+      //     productId,
+      //   },
+      // });
   
       let cartItem;
-      if (existingCartItem) {
-        // Update existing item quantity
-        cartItem = await this.prisma.cartItem.update({
-          where: { id: existingCartItem.id },
-          data: { quantity: existingCartItem.quantity + quantity },
-        });
-      } else {
+      // if (existingCartItem) {
+      //   // Update existing item quantity
+      //   cartItem = await this.prisma.cartItem.update({
+      //     where: { id: existingCartItem.id },
+      //     data: { quantity: existingCartItem.quantity + quantity },
+      //   });
+      // } else {
         // Create new cart item
         cartItem = await this.prisma.cartItem.create({
           data: {
             cartId: cart.id,
             productId,
             quantity,
+            colors,
+            sizes
           },
         });
-      }
+      // }
   
       // Return success message
       return {
         success: true,
-        message: existingCartItem ? 'Cart item updated successfully.' : 'Item added to cart successfully.',
+        message: 'Item added to cart successfully.',
         cartItem,
       };
   

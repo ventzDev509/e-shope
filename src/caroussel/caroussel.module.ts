@@ -1,9 +1,10 @@
 import { Module } from '@nestjs/common';
 import { CarousselService } from './caroussel.service';
 import { CarousselController } from './caroussel.controller';
+import { PrismaService } from '../prisma/prisma.service';
 
 @Module({
-  providers: [CarousselService],
-  controllers: [CarousselController]
+  controllers: [CarousselController],
+  providers: [CarousselService, PrismaService],
 })
 export class CarousselModule {}

@@ -153,26 +153,5 @@ export class CategoriesController {
       });
     }
   }
-  // @Put(':id')
-  // @HttpCode(HttpStatus.OK)
-  // async update(
-  //   @Param('id') id: number,
-  //   @Body() updateCategoryDto: UpdateCategoryDto,
-  // ) {
-  //   try {
-  //     const category = await this.categoriesService.update(
-  //       id,
-  //       updateCategoryDto,
-  //     );
-  //     return category;
-  //   } catch (error) {
-  //     if (error instanceof NotFoundException) {
-  //       throw error; // Catégorie non trouvée
-  //     } else {
-  //       throw new InternalServerErrorException(
-  //         'An unexpected error occurred while updating the category.',
-  //       );
-  //     }
-  //   }
-  // }
+
 }

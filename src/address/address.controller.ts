@@ -1,4 +1,15 @@
-import { Controller, Get, Post, Body, Param, Patch, Delete, Req, UseGuards, Res } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  Patch,
+  Delete,
+  Req,
+  UseGuards,
+  Res,
+} from '@nestjs/common';
 import { AddressService } from './address.service';
 import { CreateAddressDto } from './dto/create-address.dto';
 import { UpdateAddressDto } from './dto/update-address.dto';
@@ -13,24 +24,31 @@ export class AddressController {
   @UseGuards(JwtAuthGuard)
   async createAddress(
     @Body() createAddressDto: CreateAddressDto,
-     @Req() req,
+    @Req() req,
+    @Res() res,
   ) {
-    const userId = req.user.id;  // Obtenez l'ID de l'utilisateur à partir du JWT ou de la session
-    return this.addressService.createAddress(createAddressDto, userId);
+    const userId = req.user.id; // Obtenez l'ID de l'utilisateur à partir du JWT ou de la session
+    const response = await this.addressService.createAddress(
+      createAddressDto,
+      userId,
+    );
+    return res.status(200).json({
+      success: true,
+      data: response,
+    });
   }
 
   @Get()
   @UseGuards(JwtAuthGuard)
-  async getUserAddresses( @Req() req,
-    @Res() res,) {
+  async getUserAddresses(@Req() req, @Res() res) {
     const userId = req.user.id;
-    return this.addressService.getUserAddresses(userId);
+    const response = await this.addressService.getUserAddresses(userId);
+    return res.status(200).json(response);
   }
 
   @Get(':id')
   @UseGuards(JwtAuthGuard)
-  async getAddressById(@Param('id') id: number,  @Req() req,
-    @Res() res,) {
+  async getAddressById(@Param('id') id: number, @Req() req, @Res() res) {
     const userId = req.user.id;
     return this.addressService.getAddressById(id, userId);
   }
@@ -49,8 +67,7 @@ export class AddressController {
 
   @Delete(':id')
   @UseGuards(JwtAuthGuard)
-  async deleteAddress(@Param('id') id: number,  @Req() req,
-    @Res() res,) {
+  async deleteAddress(@Param('id') id: number, @Req() req, @Res() res) {
     const userId = req.user.id;
     return this.addressService.deleteAddress(id, userId);
   }
