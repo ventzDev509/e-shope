@@ -34,7 +34,6 @@ import { FileInterceptor } from '@nestjs/platform-express';
 export class CategoriesController {
   constructor(private readonly categoriesService: CategoriesService) {}
   @Get()
-  @UseGuards(JwtAuthGuard)
   async getAll() {
     return await this.categoriesService.getAllCategry();
   }
