@@ -22,13 +22,9 @@ async function bootstrap() {
     prefix: '/uploads/',
   }); 
   const cors={ 
-    origin: [`http://localhost:5173`],
+    origin: [`${process.env.LINK}`],
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
   }
-  // const cors={
-  //   origin: [`https://e-shope-r30g.onrender.com:${PORT}`],
-  //   methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
-  // }
  
   app.enableCors(cors);
  
