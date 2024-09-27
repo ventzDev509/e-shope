@@ -22,12 +22,12 @@ async function bootstrap() {
     prefix: '/uploads/',
   }); 
   const cors={ 
-    origin: [`${process.env.LINK}`],
+    origin: [process.env.LINK],
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
   }
  
   app.enableCors(cors);
- 
+  
   await app.listen(PORT);
 }
 bootstrap();
