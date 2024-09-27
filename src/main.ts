@@ -23,7 +23,7 @@ async function bootstrap() {
   }); 
   const cors = {
     origin: function (origin, callback) {
-      const allowedOrigins = [process.env.LINK, 'http://localhost:5173'];
+      const allowedOrigins = [process.env.LINK,'http://gh.free.nf' ,'http://localhost:5173'];
       if (allowedOrigins.indexOf(origin) !== -1 || !origin) {
         callback(null, true); // Allow the request
       } else {
