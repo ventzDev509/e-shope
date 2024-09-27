@@ -85,7 +85,6 @@ export class CarousselController {
   }
 
   @Get()
-  @UseGuards(JwtAuthGuard)
   async findAll() {
     return this.carousselService.findAll();
   }

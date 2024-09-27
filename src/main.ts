@@ -21,11 +21,18 @@ async function bootstrap() {
   app.useStaticAssets(join(__dirname, '..', 'uploads'), {
     prefix: '/uploads/',
   }); 
-  const cors={ 
-    origin: [process.env.LINK],
+  const cors = {
+    origin: function (origin, callback) {
+      const allowedOrigins = [process.env.LINK, 'http://localhost:5173'];
+      if (allowedOrigins.indexOf(origin) !== -1 || !origin) {
+        callback(null, true); // Allow the request
+      } else {
+        callback(new Error('Not allowed by CORS')); // Reject the request
+      }
+    },
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
-  }
- 
+  };   
+  
   app.enableCors(cors);
   
   await app.listen(PORT);
