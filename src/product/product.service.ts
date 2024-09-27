@@ -18,7 +18,7 @@ export class ProductService {
     try {
       const products = await this.prismaService.product.findMany({
         include: {
-          category: true, // Inclure les informations de catégorie si nécessaire
+          category: true,
           admin: {
             select: {
               id: true,
@@ -32,13 +32,28 @@ export class ProductService {
         },
       });
 
-      return products;
+      // Ajout du calcul du prix final avec le rabais pour chaque produit
+      const productsWithFinalPrice = products.map((product) => {
+        // Vérifier si le discount est défini et non nul
+        const finalPrice =
+          product.discount != null
+            ? product.price - (product.price * product.discount) / 100
+            : product.price;
+
+        return {
+          ...product,
+          finalPrice, // Ajout du champ finalPrice dans la réponse
+        };
+      });
+
+      return productsWithFinalPrice;
     } catch (error) {
       throw new InternalServerErrorException(
         'An unexpected error occurred while fetching products',
       );
     }
   }
+
   async getProductById(productId: number) {
     try {
       const product = await this.prismaService.product.findUnique({
@@ -46,7 +61,7 @@ export class ProductService {
           id: productId,
         },
         include: {
-          category: true, // Inclure les informations de catégorie
+          category: true,
           admin: {
             select: {
               id: true,
@@ -56,18 +71,26 @@ export class ProductService {
           },
           colors: true,
           sizes: true,
-          additionalImages: true, // Inclure les images supplémentaires
+          additionalImages: true,
         },
       });
 
-      // Vérifier si le produit existe
       if (!product) {
         throw new NotFoundException(`Product with ID ${productId} not found`);
       }
 
-      return product;
+      // Vérifier si le discount est défini et non nul
+      const finalPrice =
+        product.discount != null
+          ? product.price - (product.price * product.discount) / 100
+          : product.price;
+
+      // Retourner le produit avec le champ finalPrice ajouté
+      return {
+        ...product,
+        finalPrice, // Ajout du champ finalPrice dans la réponse
+      };
     } catch (error) {
-      // Gérer les erreurs de manière appropriée
       if (error instanceof NotFoundException) {
         throw error;
       }
@@ -76,7 +99,7 @@ export class ProductService {
       );
     }
   }
-
+ 
   async getProductsByAdmin(userId: number) {
     const user = await this.prismaService.user.findUnique({
       where: { id: userId },

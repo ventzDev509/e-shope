@@ -18,7 +18,7 @@ export class MailService {
   } 
  
   async sendPasswordResetEmail(to: string, token: string) {
-    const resetLink = `http://localhost:5173/reset-password?token=${token}&email=${to}`;
+    const resetLink = `${process.env.LINK}/reset-password?token=${token}&email=${to}`;
     const mailOptions = {
       from: 'carribean-cart <eventzmarceille@gmail>',
       to: to,
