@@ -19,6 +19,7 @@ import * as nodemailer from 'nodemailer';
 import { randomBytes } from 'crypto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { MailService } from 'src/mailer/mailer.service';
+import { UpdateUserDto } from './dto/update-user.dto';
 
 @Injectable()
 export class AuthService {
@@ -67,6 +68,37 @@ export class AuthService {
       token: this.jwtservice.sign({ username: users.email }),
     };
   }
+
+  async updateUser(userId: number, updateUserDto: UpdateUserDto) {
+    const { name, telephone, adress } = updateUserDto;
+
+    // Trouver l'utilisateur par ID
+    const user = await this.prismaService.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new NotFoundException(`User with ID ${userId} not found`);
+    }
+
+    // Mettre à jour l'utilisateur
+    const updatedUser = await this.prismaService.user.update({
+      where: { id: userId },
+      data: {
+        name: name || user.name,
+        adress: adress || user.adress,
+        telephone: telephone || user.telephone,
+      },
+    }); 
+
+    // Supprimer les champs sensibles
+    delete updatedUser.password;
+    delete updatedUser.resetPasswordToken;
+    delete updatedUser.resetPasswordExpires;
+
+    return updatedUser;
+  }
+
   // passwor reset
   async forgotPassword(email: string) {
     const user = await this.prismaService.user.findUnique({ where: { email } });
@@ -93,7 +125,19 @@ export class AuthService {
 
     return { message: 'Password reset link sent to your email.' };
   }
+  async findOne(id: number) {
+    const user = await this.prismaService.user.findUnique({
+      where: { id },
+    });
+    if (!user) {
+      throw new NotFoundException(`user avec l'ID ${id} non trouvé`);
+    }
+    delete user.password;
+    delete user.resetPasswordExpires;
+    delete user.resetPasswordToken;
 
+    return user;
+  }
   async resetPassword(
     resetPasswordDto: ResetPasswordDto,
     token: string,

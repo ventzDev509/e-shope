@@ -6,10 +6,13 @@ import {
   HttpException,
   HttpStatus,
   Param,
+  Patch,
   Post,
+  Put,
   Query,
   Req,
   Res,
+  UseGuards,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { Request, Response } from 'express';
@@ -18,6 +21,9 @@ import { CreateUserDto } from './dto/regisration-dto';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { usersService } from 'src/users/users.service';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import { JwtAuthGuard } from './auth.guard';
+import { User } from '@prisma/client';
+import { UpdateUserDto } from './dto/update-user.dto';
 @ApiTags('Authantification module')
 @Controller('auth')
 export class AuthController {
@@ -67,7 +73,27 @@ export class AuthController {
         .json({ message: 'An unexpected error occurred' });
     }
   }
+  // Route pour mettre à jour un utilisateur
+  @UseGuards(JwtAuthGuard) // Protection par JWT pour les utilisateurs connectés
+  @Put('/update')
+  async updateUser(
+    @Req() req, @Res() res,
+    @Body() updateUserDto: UpdateUserDto,
+  ): Promise<User> {
+    const userId = req.user.id;
+    return this.authService.updateUser(userId, updateUserDto);
+  }
 
+  // Route alternative pour la mise à jour avec PATCH (mise à jour partielle)
+  @UseGuards(JwtAuthGuard) // Protection par JWT
+  @Patch(':id')
+  async partialUpdateUser(
+    @Req() req, @Res() res,
+    @Body() updateUserDto: UpdateUserDto, 
+  ): Promise<User> {    
+    const userId = req.user.id;   
+    return this.authService.updateUser(userId, updateUserDto);
+  }
   @Post('forgot-password')
   async forgotPassword(@Body('email') email: string) {
     const resetToken = await this.authService.forgotPassword(email);
@@ -79,8 +105,27 @@ export class AuthController {
     @Query('token') token: string,
     @Query('email') email: string,
     @Body() resetPasswordDto: ResetPasswordDto,
-  ) { 
-    // Passer le token à la méthode de service 
+  ) {
+    // Passer le token à la méthode de service
     return this.authService.resetPassword(resetPasswordDto, token, email);
+  }
+  @Get('/user')
+  @UseGuards(JwtAuthGuard)
+  async getUserById(@Res() res: Response, @Req() req) {
+    try {
+      const userId = req.user.id;
+      const response = await this.authService.findOne(userId);
+      return res.json(response);
+    } catch (error) {
+      // Handle known exceptions
+      if (error instanceof HttpException) {
+        return res.status(error.getStatus()).json({ message: error.message });
+      }
+
+      // Handle unexpected errors
+      return res
+        .status(HttpStatus.INTERNAL_SERVER_ERROR)
+        .json({ message: 'An unexpected error occurred' });
+    }
   }
 }

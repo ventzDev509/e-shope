@@ -14,6 +14,8 @@ model User {
   email                String    @unique
   profile              String
   password             String
+  telephone            String    @default("")
+  adress               String    @default("")
   role                 UserRole  @default(CUSTOMER) // Utilisation de l'énum avec valeur par défaut
   resetPasswordToken   String?   @unique
   resetPasswordExpires DateTime?
