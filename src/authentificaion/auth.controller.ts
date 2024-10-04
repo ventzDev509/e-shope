@@ -90,7 +90,7 @@ export class AuthController {
   async partialUpdateUser(
     @Req() req, @Res() res,
     @Body() updateUserDto: UpdateUserDto, 
-  ): Promise<User> {    
+  ): Promise<User> {      
     const userId = req.user.id;   
     return this.authService.updateUser(userId, updateUserDto);
   }
