@@ -86,15 +86,18 @@ model Category {
   updatedAt DateTime  @updatedAt
 }
 
+
 model Order {
   id                Int         @id @default(autoincrement())
   total             Float
-  status            String      @default("PENDING") // PENDING, COMPLETED, CANCELLED
+  status            String      @default("PENDING") 
   userId            Int
   user              User        @relation(fields: [userId], references: [id])
+  addressId         Int
+  address           Address     @relation(fields: [addressId], references: [id]) // Associe chaque commande à une adresse
   items             OrderItem[]
   payments          Payment[]
-  estimatedDelivery DateTime? // Champ pour stocker le temps de livraison estimé
+  estimatedDelivery DateTime?   // Champ pour stocker le temps de livraison estimé
   createdAt         DateTime    @default(now())
   updatedAt         DateTime    @updatedAt
 }
@@ -157,18 +160,19 @@ model Payment {
 }
 
 model Address {
-  id        Int      @id @default(autoincrement())
-  street    String
-  city      String
-  state     String
-  zipCode   String
-  country   String
-  telephone String
+  id             Int       @id @default(autoincrement())
+  street         String
+  city           String
+  state          String
+  zipCode        String
+  country        String
+  telephone      String
   addressDetails String
-  userId    Int
-  user      User     @relation(fields: [userId], references: [id])
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  userId         Int
+  user           User      @relation(fields: [userId], references: [id])
+  orders         Order[]   // Relation avec plusieurs commandes
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 }
 
 // site config 

@@ -14,18 +14,18 @@ export class AddressService {
         user: {
           connect: { id: userId },
         },
-        country:"haiti",
-        state:"",
-        zipCode:""
+       
+        // Ne pas inclure 'orderId' ici, Prisma gère cette relation via 'order'
       },
     });
-  }
-
+  } 
+  
+   
   async getUserAddresses(userId: number) {
     return this.prismaService.address.findMany({
       where: { userId }, 
     });
-  }
+  } 
 
   async getAddressById(id: number, userId: number) {
     const address = await this.prismaService.address.findFirst({

@@ -99,7 +99,7 @@ export class ProductService {
       );
     }
   }
- 
+
   async getProductsByAdmin(userId: number) {
     const user = await this.prismaService.user.findUnique({
       where: { id: userId },
@@ -124,7 +124,20 @@ export class ProductService {
       },
     });
 
-    return products;
+    // Ajout du calcul du prix final avec le rabais pour chaque produit
+    const productsWithFinalPrice = products.map((product) => {
+      // Vérifier si le discount est défini et non nul
+      const finalPrice =
+        product.discount != null
+          ? product.price - (product.price * product.discount) / 100
+          : product.price;
+
+      return {
+        ...product,
+        finalPrice, // Ajout du champ finalPrice dans la réponse
+      };
+    });
+    return productsWithFinalPrice;
   }
 
   async createProduct(createProductDto: CreateProductDto, userId: number) {
@@ -367,7 +380,21 @@ export class ProductService {
       throw new NotFoundException('No products found with the given name');
     }
 
-    return products;
+    // Ajout du calcul du prix final avec le rabais pour chaque produit
+    const productsWithFinalPrice = products.map((product) => {
+      // Vérifier si le discount est défini et non nul
+      const finalPrice =
+        product.discount != null
+          ? product.price - (product.price * product.discount) / 100
+          : product.price;
+
+      return {
+        ...product,
+        finalPrice, // Ajout du champ finalPrice dans la réponse
+      };
+    });
+
+    return productsWithFinalPrice;
   }
 
   async searchProductsByNameByAdmin(name: string, userId: number) {
@@ -389,8 +416,21 @@ export class ProductService {
     if (products.length === 0) {
       throw new NotFoundException('No products found with the given name');
     }
+    // Ajout du calcul du prix final avec le rabais pour chaque produit
+    const productsWithFinalPrice = products.map((product) => {
+      // Vérifier si le discount est défini et non nul
+      const finalPrice =
+        product.discount != null
+          ? product.price - (product.price * product.discount) / 100
+          : product.price;
 
-    return products;
+      return {
+        ...product,
+        finalPrice, // Ajout du champ finalPrice dans la réponse
+      };
+    });
+
+    return productsWithFinalPrice;
   }
 
   async getProductsByCategory(categoryId: number) {
@@ -425,8 +465,21 @@ export class ProductService {
           `No products found for category with ID ${categoryId}`,
         );
       }
+      // Ajout du calcul du prix final avec le rabais pour chaque produit
+      const productsWithFinalPrice = products.map((product) => {
+        // Vérifier si le discount est défini et non nul
+        const finalPrice =
+          product.discount != null
+            ? product.price - (product.price * product.discount) / 100
+            : product.price;
 
-      return products;
+        return {
+          ...product,
+          finalPrice, // Ajout du champ finalPrice dans la réponse
+        };
+      });
+
+      return productsWithFinalPrice;
     } catch (error) {
       if (error instanceof NotFoundException) {
         throw error;

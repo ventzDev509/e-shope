@@ -9,8 +9,8 @@ export class PaymentsService {
 
   async capturePaymentByOrderId(orderId: string): Promise<any> {
     const moncash_ = moncash.configure({
-      client_id: process.env.MONCASH_CLIENT_ID,
-      client_secret: process.env.MONCASH_CLIENT_SECRET,
+      clientId: process.env.MONCASH_CLIENT_ID,
+      clientSecret: process.env.MONCASH_CLIENT_SECRET,
       mode: 'sandbox', // or 'live'
     });
     return new Promise((resolve, reject) => {
@@ -43,7 +43,8 @@ export class PaymentsService {
           resolve({ payment, paymentURI });
         }
       });
-    });
+    }); 
+    console.log(response)
     return response
   }
 }

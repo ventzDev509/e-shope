@@ -28,13 +28,14 @@ async function bootstrap() {
         callback(null, true); // Allow the request
       } else {
         callback(new Error('Not allowed by CORS')); // Reject the request
-      }
+      } 
     },
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
   };   
-  
-  app.enableCors(cors);
-  
-  await app.listen(PORT); 
-}
-bootstrap();
+   
+  app.enableCors(cors);    
+     
+  await app.listen(PORT);  
+}  
+bootstrap(); 
+ 

@@ -33,6 +33,7 @@ class OrderItemDto {
   @IsArray()
   @IsString({ each: true })
   sizes?: string[];
+  
 }
 
 class PaymentDto {
@@ -61,9 +62,11 @@ export class CreateOrderDto {
   @ValidateNested({ each: true })
   @Type(() => PaymentDto)
   payments?: PaymentDto[];
-
+  @IsNumber()
+  addressId :number;
   @IsOptional()
   @IsDate()
   @Type(() => Date)
   estimatedDelivery?: Date; // Champ pour le temps de livraison estimé, si nécessaire
+  
 }

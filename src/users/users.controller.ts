@@ -47,8 +47,8 @@ export class usersController {
   async findOne(
     @Param('id') id: string,
     @Req() request: Request,
-    @Res() response: Response,
-  ) {
+    @Res() response: Response,  
+  ) { 
     try {
       const result = await this.usersService.findOne(+id);
       delete result.password;
@@ -59,7 +59,7 @@ export class usersController {
         .json({ message: 'Une erreur est survenue', error });
     }
   }
-  @ApiOperation({summary:"delete a user by id"})
+  @ApiOperation({summary:"delete a user by id"})  
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.usersService.remove(+id);

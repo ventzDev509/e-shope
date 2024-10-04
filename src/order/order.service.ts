@@ -16,59 +16,70 @@ export class OrderService {
   constructor(private readonly prismaService: PrismaService) {}
 
   async createOrder(createOrderDto: CreateOrderDto, userId: number) {
-    const { status, items, payments } = createOrderDto;
-
+    const { status, items, payments, addressId } = createOrderDto;
+  
     try {
       // Vérifie si l'utilisateur existe
       const user = await this.prismaService.user.findUnique({
         where: { id: userId },
-        select: { id: true }, // Ne sélectionne que l'id, sans le mot de passe
+        select: { id: true },
       });
-
+  
       if (!user) {
         throw new NotFoundException('User not found');
       }
-
+  
+      // Vérifie si l'adresse existe et appartient à l'utilisateur
+      const address = await this.prismaService.address.findUnique({
+        where: { id: addressId },
+        select: { id: true, userId: true },
+      });
+  
+      if (!address || address.userId !== userId) {
+        throw new NotFoundException('Address not found or does not belong to user');
+      }
+  
       // Calcul du total de la commande et mise à jour du stock des produits
       let total = 0;
-
+  
       for (const item of items) {
         const product = await this.prismaService.product.findUnique({
           where: { id: item.productId },
         });
-
+  
         if (!product) {
-          throw new NotFoundException(
-            `Product with ID ${item.productId} not found`,
-          );
+          throw new NotFoundException(`Product with ID ${item.productId} not found`);
         }
-
+  
         if (product.stock < item.quantity) {
           throw new BadRequestException(
             `Not enough stock for product ${product.name}. Available stock: ${product.stock}`,
           );
         }
-
+  
         // Mettre à jour le stock du produit
         await this.prismaService.product.update({
           where: { id: product.id },
           data: { stock: product.stock - item.quantity },
         });
-
+  
         total += item.price * item.quantity;
       }
-
+  
       // Calculer la date de livraison estimée (une semaine à partir de maintenant)
       const estimatedDelivery = addDays(new Date(), 7);
-
-      // Crée la commande
+  
+      // Crée la commande et associe l'adresse
       const order = await this.prismaService.order.create({
         data: {
           total,
           status: status || 'PENDING',
-          estimatedDelivery, // Ajout du temps de livraison estimé
+          estimatedDelivery,
           user: {
             connect: { id: userId },
+          },
+          address: {
+            connect: { id: addressId }, 
           },
           items: {
             create: items.map((item) => ({
@@ -77,8 +88,8 @@ export class OrderService {
               },
               quantity: item.quantity,
               price: item.price,
-              colors: item.colors ? item.colors.join(',') : '', // Concaténer les couleurs en chaîne
-              sizes: item.sizes ? item.sizes.join(',') : '', // Concaténer les tailles en chaîne
+              colors: item.colors ? item.colors.join(',') : '',
+              sizes: item.sizes ? item.sizes.join(',') : '',
             })),
           },
           payments: {
@@ -88,13 +99,14 @@ export class OrderService {
         include: {
           items: {
             include: {
-              product: true, // Inclure les détails du produit dans les items
+              product: true,
             },
           },
           payments: true,
+          address: true, // Inclure les détails de l'adresse dans la réponse
         },
       });
-
+  
       return order;
     } catch (error) {
       if (
@@ -103,14 +115,15 @@ export class OrderService {
       ) {
         throw error;
       }
-
+  
       // Gestion des erreurs internes
-      console.log(error);
       throw new InternalServerErrorException(
         'An unexpected error occurred while creating the order',
       );
     }
   }
+  
+
 
   // Méthode pour récupérer toutes les commandes
   async getAllOrders() {
@@ -128,6 +141,7 @@ export class OrderService {
           },
           payments: true, // Inclure les paiements
           user: true, // Inclure les informations de l'utilisateur
+          address: true, // Inclure les détails de l'adresse dans la réponse
         },
       });
 
@@ -213,11 +227,17 @@ export class OrderService {
   async getOrderByStatus(status: string, userId: number) {
     try {
       const orders = await this.prismaService.order.findMany({
-        where: { status: status, userId: userId },
+        where: {
+          status: {
+            equals: status,
+            mode: 'insensitive', // Rend la recherche insensible à la casse
+          },
+          userId: userId,
+        },
         include: {
           items: {
-            include: {
-              product: {
+            include: { 
+              product: { 
                 include: {
                   sizes: true,
                   colors: true,
@@ -239,6 +259,7 @@ export class OrderService {
       }
       return orders;
     } catch (error) {
+     
       throw new InternalServerErrorException(
         'An unexpected error occurred while retrieving the user orders',
       );
