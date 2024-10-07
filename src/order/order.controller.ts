@@ -101,6 +101,29 @@ export class OrderController {
         .status(HttpStatus.INTERNAL_SERVER_ERROR)
         .json({ message: 'An unexpected error occurred' });
     }
+  } 
+  @Get('/payment/:querry')
+  @UseGuards(JwtAuthGuard)
+  async getOrderByPaymentStatus(
+    @Param('querry') querry: string,
+    @Res() res: Response,
+    @Req() req,
+  ) {
+    const userId = req.user.id;
+    try {   
+      const response = await this.orderService.getOrderByPaymentStatus(querry, userId);
+      return res.status(HttpStatus.CREATED).json(response);
+    } catch (error) {
+      // Handle known exceptions
+      if (error instanceof HttpException) {
+        return res.status(error.getStatus()).json({ message: error.message });
+      }
+
+      // Handle unexpected errors
+      return res
+        .status(HttpStatus.INTERNAL_SERVER_ERROR)
+        .json({ message: 'An unexpected error occurred' });
+    }
   }
   @Put('/status/:id/:status')
   @UseGuards(JwtAuthGuard)

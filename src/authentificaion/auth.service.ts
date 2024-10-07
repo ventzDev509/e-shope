@@ -69,7 +69,7 @@ export class AuthService {
     };
   }
 
-  async updateUser(userId: number, updateUserDto: UpdateUserDto) {
+  async updateUser(userId: number, updateUserDto: UpdateUserDto,imageUrl) {
     const { name, telephone, adress } = updateUserDto;
 
     // Trouver l'utilisateur par ID
@@ -88,6 +88,7 @@ export class AuthService {
         name: name || user.name,
         adress: adress || user.adress,
         telephone: telephone || user.telephone,
+        profile:imageUrl || user.profile
       },
     }); 
 
@@ -95,7 +96,7 @@ export class AuthService {
     delete updatedUser.password;
     delete updatedUser.resetPasswordToken;
     delete updatedUser.resetPasswordExpires;
-
+console.log(updatedUser)
     return updatedUser;
   }
 

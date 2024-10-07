@@ -1,4 +1,6 @@
+import { diskStorage } from 'multer';
 import {
+  BadRequestException,
   Body,
   ConflictException,
   Controller,
@@ -6,13 +8,16 @@ import {
   HttpException,
   HttpStatus,
   Param,
+  ParseIntPipe,
   Patch,
   Post,
   Put,
   Query,
   Req,
   Res,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { Request, Response } from 'express';
@@ -24,6 +29,8 @@ import { ResetPasswordDto } from './dto/reset-password.dto';
 import { JwtAuthGuard } from './auth.guard';
 import { User } from '@prisma/client';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { extname } from 'path';
+import { FileInterceptor } from '@nestjs/platform-express';
 @ApiTags('Authantification module')
 @Controller('auth')
 export class AuthController {
@@ -74,31 +81,139 @@ export class AuthController {
     }
   }
   // Route pour mettre à jour un utilisateur
-  @UseGuards(JwtAuthGuard) // Protection par JWT pour les utilisateurs connectés
+
+
+
   @Put('/update')
-  async updateUser(
-    @Req() req, @Res() res,
+  @UseGuards(JwtAuthGuard)
+  @UseInterceptors(
+    FileInterceptor('image', {
+      storage: diskStorage({
+        destination: './uploads', // Dossier où les images seront stockées
+        filename: (req, file, cb) => {
+          // Générer un nom de fichier unique en utilisant la date et un identifiant aléatoire
+          const uniqueSuffix =
+            Date.now() + '-' + Math.round(Math.random() * 1e9);
+          const ext = extname(file.originalname);
+          const filename = `${file.fieldname}-${uniqueSuffix}${ext}`;
+          cb(null, filename);
+        },
+      }),
+      fileFilter: (req, file, cb) => {
+        if (!file.mimetype.match(/\/(jpg|jpeg|png|gif)$/)) {
+          cb(new BadRequestException('Only image files are allowed!'), false);
+        } else {
+          cb(null, true);
+        }
+      },
+    }),
+  )
+  async update(
+    @UploadedFile() file: Express.MulterFile,
+    @Req() req,
+    @Res() res,
     @Body() updateUserDto: UpdateUserDto,
-  ): Promise<User> {
-    const userId = req.user.id;
-    return this.authService.updateUser(userId, updateUserDto);
+   
+  ) {
+    if (!file) {
+      throw new BadRequestException('No file uploaded');
+    }
+
+    try {
+      // Construire l'URL complète de l'image téléchargée
+      const baseUrl = process.env.UPLOAD_LINK; // Remplacez par l'URL de votre serveur
+      const imageUrl = `${baseUrl}/uploads/${file.filename}`;
+      const userId = req.user.id;
+      console.log(baseUrl)
+
+      // Correction : Assurez-vous que la méthode updateUser retourne un User
+      const updatedUser = await this.authService.updateUser(
+        userId,
+        updateUserDto,
+        imageUrl,
+      );
+      return res.status(HttpStatus.OK).json(updatedUser); // Ajout d'une réponse réussie
+    } catch (error) {
+      // Handle known exceptions
+      if (error instanceof HttpException) {
+        return res.status(error.getStatus()).json({ message: error.message });
+      }
+
+      // Handle unexpected errors
+      return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+        message: 'An unexpected error occurred while creating the product',
+      });
+    }
   }
 
-  // Route alternative pour la mise à jour avec PATCH (mise à jour partielle)
-  @UseGuards(JwtAuthGuard) // Protection par JWT
-  @Patch(':id')
-  async partialUpdateUser(
-    @Req() req, @Res() res,
-    @Body() updateUserDto: UpdateUserDto, 
-  ): Promise<User> {      
-    const userId = req.user.id;   
-    return this.authService.updateUser(userId, updateUserDto);
-  }
-  @Post('forgot-password')
-  async forgotPassword(@Body('email') email: string) {
-    const resetToken = await this.authService.forgotPassword(email);
-    return { message: 'Reset password instructions sent to email', resetToken };
-  }
+
+
+
+
+
+
+
+
+  // @Put('/update')
+  // @UseGuards(JwtAuthGuard)
+  // @UseInterceptors(
+  //   FileInterceptor('image', {
+  //     storage: diskStorage({
+  //       destination: './uploads', // Dossier où les images seront stockées
+  //       filename: (req, file, cb) => {
+  //         // Générer un nom de fichier unique en utilisant la date et un identifiant aléatoire
+  //         const uniqueSuffix =
+  //           Date.now() + '-' + Math.round(Math.random() * 1e9);
+  //         const ext = extname(file.originalname);
+  //         const filename = `${file.fieldname}-${uniqueSuffix}${ext}`;
+  //         cb(null, filename);
+  //       },
+  //     }),
+  //     fileFilter: (req, file, cb) => {
+  //       if (!file.mimetype.match(/\/(jpg|jpeg|png|gif)$/)) {
+  //         cb(new BadRequestException('Only image files are allowed!'), false);
+  //       } else {
+  //         cb(null, true);
+  //       }
+  //     },
+  //   }),
+  // )
+  // async update(
+  //   @UploadedFile() file: Express.MulterFile,
+  //   @Req() req,
+  //   @Res() res,
+  //   @Body() updateUserDto: UpdateUserDto,
+  // ): Promise<User> {
+  //   console.log(updateUserDto)
+  //   if (!file) {
+  //     throw new BadRequestException('No file uploaded');
+  //   }
+
+  //   try {
+  //     // Construire l'URL complète de l'image téléchargée
+  //     const baseUrl = process.env.UPLOAD_LINK; // Remplacez par l'URL de votre serveur
+  //     const imageUrl = `${baseUrl}/uploads/${file.filename}`;
+  //     const userId = req.user.id;
+
+  //     // Correction : Assurez-vous que la méthode updateUser retourne un User
+  //     const updatedUser = await this.authService.updateUser(
+  //       userId,
+  //       updateUserDto,
+  //       imageUrl,
+  //     );
+  //     return res.status(HttpStatus.OK).json(updatedUser); // Ajout d'une réponse réussie
+  //   } catch (error) {
+  //     // Handle known exceptions
+  //     if (error instanceof HttpException) {
+  //       return res.status(error.getStatus()).json({ message: error.message });
+  //     }
+
+  //     // Handle unexpected errors
+  //     return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+  //       message: 'An unexpected error occurred while updating the user', // Correction du message
+  //     });
+  //   }
+  // }
 
   @Post('reset-password')
   async resetPassword(

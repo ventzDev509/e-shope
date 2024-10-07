@@ -44,7 +44,6 @@ export class PaymentsService {
         }
       });
     }); 
-    console.log(response)
     return response
   }
 }
