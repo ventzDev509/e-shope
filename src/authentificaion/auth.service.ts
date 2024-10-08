@@ -69,7 +69,7 @@ export class AuthService {
     };
   }
 
-  async updateUser(userId: number, updateUserDto: UpdateUserDto,imageUrl) {
+  async updateUser(userId: number, updateUserDto: UpdateUserDto, imageUrl) {
     const { name, telephone, adress } = updateUserDto;
 
     // Trouver l'utilisateur par ID
@@ -80,23 +80,35 @@ export class AuthService {
     if (!user) {
       throw new NotFoundException(`User with ID ${userId} not found`);
     }
-
-    // Mettre à jour l'utilisateur
-    const updatedUser = await this.prismaService.user.update({
-      where: { id: userId },
-      data: {
-        name: name || user.name,
-        adress: adress || user.adress,
-        telephone: telephone || user.telephone,
-        profile:imageUrl || user.profile
-      },
-    }); 
+    let updatedUser;
+    if (imageUrl) {
+      // Mettre à jour l'utilisateur
+      updatedUser = await this.prismaService.user.update({
+        where: { id: userId },
+        data: {
+          name: name || user.name,
+          adress: adress || user.adress,
+          telephone: telephone || user.telephone,
+          profile: imageUrl || user.profile,
+        },
+      });
+    } else {
+      // Mettre à jour l'utilisateur
+      updatedUser = await this.prismaService.user.update({
+        where: { id: userId },
+        data: {
+          name: name || user.name,
+          adress: adress || user.adress,
+          telephone: telephone || user.telephone,
+        },
+      });
+    }
 
     // Supprimer les champs sensibles
     delete updatedUser.password;
     delete updatedUser.resetPasswordToken;
     delete updatedUser.resetPasswordExpires;
-console.log(updatedUser)
+    
     return updatedUser;
   }
 

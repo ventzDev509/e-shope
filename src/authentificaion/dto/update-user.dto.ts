@@ -6,6 +6,7 @@ import {
   MinLength,
   MaxLength,
   IsEnum,
+  IsOptional,
 } from 'class-validator';
 
 export class UpdateUserDto {
@@ -15,17 +16,11 @@ export class UpdateUserDto {
   @MaxLength(50)
   name?: string;
 
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
-  @MinLength(2)
-  @MaxLength(50)
   telephone?: string;
   
-
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
-  @MinLength(2)
-  @MaxLength(50)
   adress?: string;
-
 }

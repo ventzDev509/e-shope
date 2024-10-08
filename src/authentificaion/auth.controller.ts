@@ -115,23 +115,29 @@ export class AuthController {
     @Body() updateUserDto: UpdateUserDto,
    
   ) {
-    if (!file) {
-      throw new BadRequestException('No file uploaded');
-    }
+   
 
     try {
       // Construire l'URL complète de l'image téléchargée
       const baseUrl = process.env.UPLOAD_LINK; // Remplacez par l'URL de votre serveur
-      const imageUrl = `${baseUrl}/uploads/${file.filename}`;
+      const imageUrl = `${baseUrl}/uploads/${file?.filename}`;
       const userId = req.user.id;
-      console.log(baseUrl)
-
+   
       // Correction : Assurez-vous que la méthode updateUser retourne un User
-      const updatedUser = await this.authService.updateUser(
-        userId,
-        updateUserDto,
-        imageUrl,
-      );
+      let updatedUser
+      if(file){
+        updatedUser = await this.authService.updateUser(
+          userId,
+          updateUserDto,
+          imageUrl,
+        );
+      }else{
+        updatedUser = await this.authService.updateUser(
+          userId,
+          updateUserDto,
+          "",
+        );
+      }
       return res.status(HttpStatus.OK).json(updatedUser); // Ajout d'une réponse réussie
     } catch (error) {
       // Handle known exceptions
