@@ -15,6 +15,7 @@ import { AddressModule } from './address/address.module';
 import { CarousselModule } from './caroussel/caroussel.module';
 import { OffreVisibleModule } from './offre-visible/offre-visible.module';
 import { PaymentsModule } from './payments/payments.module';
+import { ReviewModule } from './review/review.module';
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { PaymentsModule } from './payments/payments.module';
     CarousselModule,
     OffreVisibleModule,
     PaymentsModule,
+    ReviewModule,
   ],
   providers: [ 
     {
