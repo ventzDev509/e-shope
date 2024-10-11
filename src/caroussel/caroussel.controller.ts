@@ -1,7 +1,6 @@
 import { diskStorage } from 'multer';
 import {
-  Controller,
-  Get,
+
   Post,
   Body,
   Param,
@@ -9,7 +8,7 @@ import {
   Delete,
   UploadedFile,
   Req,
-  Res,
+ 
   BadRequestException,
   HttpException,
   HttpStatus,
@@ -18,6 +17,8 @@ import {
   Put,
   ParseIntPipe,
 } from '@nestjs/common';
+import { Controller, Get, Res } from '@nestjs/common';
+import { Response } from 'express';
 import { CarousselService } from './caroussel.service';
 import { CreateCarousselDto } from './dto/create-caroussel.dto';
 import { UpdateCarousselDto } from './dto/update-caroussel.dto';
@@ -85,9 +86,23 @@ export class CarousselController {
   }
 
   @Get()
-  async findAll() {
-    return this.carousselService.findAll();
+  async findAll(@Res() res: Response) {
+    try {
+      const response = await this.carousselService.findAll();
+      
+      // Définir les en-têtes CORS
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.setHeader('Access-Control-Allow-Methods', 'GET,HEAD,PUT,PATCH,POST,DELETE');
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  
+      // Renvoyer la réponse JSON
+      res.json(response);
+    } catch (error) {
+      console.error('Erreur lors de la récupération des carrousels:', error);
+      res.status(500).json({ message: 'Erreur serveur' });
+    }
   }
+  
 
   @Get(':id')
   @UseGuards(JwtAuthGuard)

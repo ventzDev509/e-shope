@@ -20,6 +20,9 @@ async function bootstrap() {
   SwaggerModule.setup('api', app, document);
   app.useStaticAssets(join(__dirname, '..', 'uploads'), {
     prefix: '/uploads/',
+    setHeaders: (res, path, stat) => {
+      res.set('Access-Control-Allow-Origin', '*');
+    },
   }); 
   const cors = {
     origin: function (origin, callback) {
