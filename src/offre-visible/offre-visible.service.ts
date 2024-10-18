@@ -12,13 +12,29 @@ export class OffreVisibleService {
     });
   } 
 
-  //  toutes les offres visibles, avec les détails du produit
+  // toutes les offres visibles, avec les détails du produit
   async findAll() {
-    return this.prismaService.offreVisible.findMany({
+    const offers = await this.prismaService.offreVisible.findMany({
       include: {
         product: true, 
       },
     });
+
+    // Ajout du calcul du prix final avec le rabais pour chaque produit
+    const productsWithFinalPrice = offers.map((product) => {
+      // Vérifier si le discount est défini et non nul 
+      const finalPrice =
+        product.product.discount != null // Correction ici pour accéder à discount
+          ? product.product.price - (product.product.price * product.product.discount) / 100 // Correction ici pour accéder à price
+          : product.product.price;
+
+      return {
+        ...product,
+        finalPrice, // Ajout du champ finalPrice dans la réponse
+      };
+    });
+
+    return productsWithFinalPrice;
   }
 
   //  une offre visible spécifique, avec les détails du produit

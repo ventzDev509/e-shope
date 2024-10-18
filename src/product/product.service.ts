@@ -439,10 +439,10 @@ export class ProductService {
         where: { id: categoryId },
       });
 
-      if (!category) {
-        throw new NotFoundException(`Category with ID ${categoryId} not found`);
-      }
-
+      // if (!category) {
+      //   throw new NotFoundException(`Category with ID ${categoryId} not found`);
+      // }
+ 
       const products = await this.prismaService.product.findMany({
         where: { categoryId: categoryId },
         include: {

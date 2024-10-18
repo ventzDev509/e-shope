@@ -22,7 +22,7 @@ async function bootstrap() {
     prefix: '/uploads/',
     setHeaders: (res, path, stat) => {
       res.set('Access-Control-Allow-Origin', '*');
-    },
+    }, 
   }); 
   const cors = {
     origin: function (origin, callback) {

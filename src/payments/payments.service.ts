@@ -42,8 +42,8 @@ export class PaymentsService {
           const paymentURI = moncash_.payment.redirectUri(payment);
           resolve({ payment, paymentURI });
         }
-      });
+      }); 
     }); 
     return response
   }
-}
+} 
