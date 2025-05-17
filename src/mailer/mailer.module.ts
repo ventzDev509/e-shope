@@ -8,20 +8,20 @@ import { MailService } from './mailer.service';
   imports: [
     MailerModule.forRoot({
       transport: {
-        host: 'smtp.gmail.com', // Remplacez par votre hôte SMTP
-        port: 587, // Le port SMTP, généralement 587 pour TLS
-        secure: false, // Si vous utilisez TLS, mettez secure à false
+        host: 'smtp.gmail.com',
+        port: 587,
+        secure: false, 
         auth: {
-          user: 'eventzmarceille190@gmail.com', // Remplacez par votre email
-          pass: 'marceille46123390', // Remplacez par votre mot de passe
+          user: 'eventzmarceille190@gmail.com',
+          pass: 'tzqwakgcyvtmvlmd', 
         },
       },
       defaults: {
-        from: '"No Reply" <no-reply@example.com>', // Remplacez par l'adresse email de l'expéditeur par défaut
+        from: '"No Reply" <eventzmarceille190@gmail.com>', 
       },
       template: {
-        dir: join(__dirname, '../mailer/templates'), // Chemin vers les templates d'email
-        adapter: new HandlebarsAdapter(), // Utilisez Handlebars comme moteur de templates
+        dir: join(__dirname, '../mailer/templates'),
+        adapter: new HandlebarsAdapter(), 
         options: {
           strict: true,
         },
@@ -32,4 +32,3 @@ import { MailService } from './mailer.service';
   exports: [MailService],
 })
 export class MailModule {}
- 

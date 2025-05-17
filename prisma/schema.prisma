@@ -1,5 +1,5 @@
 datasource db {
-  provider = "postgresql"
+  provider = "mysql"
   url      = env("DATABASE_URL")
   
 }
@@ -16,9 +16,12 @@ model User {
   password             String
   telephone            String    @default("")
   adress               String    @default("")
+  isEmailConfirmed Boolean @default(false)
+  confirmationToken String?
   role                 UserRole  @default(CUSTOMER) // Utilisation de l'énum avec valeur par défaut
   resetPasswordToken   String?   @unique
   resetPasswordExpires DateTime?
+  provider          String   @default("local")
   orders               Order[]
   cart                 Cart?
   reviews              Review[]
@@ -35,6 +38,7 @@ enum UserRole {
 
 model Product {
   id               Int            @id @default(autoincrement())
+  uiid              String   @default(uuid())
   name             String
   description      String
   price            Float
@@ -60,6 +64,7 @@ model Product {
 
 model ProductImage {
   id        Int     @id @default(autoincrement())
+   uiid              String   @default(uuid())
   imageUrls String
   productId Int
   product   Product @relation(fields: [productId], references: [id])
@@ -67,6 +72,7 @@ model ProductImage {
 
 model Color {
   id        Int     @id @default(autoincrement())
+   uiid              String   @default(uuid())
   name      String
   productId Int
   product   Product @relation(fields: [productId], references: [id], onDelete: Cascade, name: "ProductColors")
@@ -74,6 +80,7 @@ model Color {
 
 model Size {
   id        Int     @id @default(autoincrement())
+   uiid              String   @default(uuid())
   name      String
   productId Int
   product   Product @relation(fields: [productId], references: [id], onDelete: Cascade, name: "ProductSizes")
@@ -81,6 +88,7 @@ model Size {
 
 model Category {
   id        Int       @id @default(autoincrement())
+   uiid              String   @default(uuid())
   name      String    @unique
   imageUrl  String
   products  Product[]
@@ -91,6 +99,7 @@ model Category {
 
 model Order {
   id                Int         @id @default(autoincrement())
+   uiid              String   @default(uuid())
   total             Float
   status            String      @default("PENDING") 
   userId            Int
@@ -106,6 +115,7 @@ model Order {
 
 model OrderItem {
   id        Int      @id @default(autoincrement())
+   uiid              String   @default(uuid())
   quantity  Int
   price     Float
   productId Int
@@ -120,6 +130,7 @@ model OrderItem {
 
 model Cart {
   id     Int        @id @default(autoincrement())
+   uiid              String   @default(uuid())
   userId Int        @unique
   user   User       @relation(fields: [userId], references: [id])
   items  CartItem[]
@@ -127,6 +138,7 @@ model Cart {
 
 model CartItem {
   id        Int      @id @default(autoincrement())
+   uiid              String   @default(uuid())
   quantity  Int
   productId Int
   colors    String 
@@ -140,6 +152,7 @@ model CartItem {
 
 model Review {
   id        Int      @id @default(autoincrement())
+   uiid              String   @default(uuid())
   rating    Int
   comment   String?
   productId Int
@@ -152,6 +165,7 @@ model Review {
 
 model Payment {
   id        Int      @id @default(autoincrement())
+   uiid              String   @default(uuid())
   amount    Float
   method    String   @default("moncash") // Ajoutez ce champ pour indiquer le mode de paiement
   status    String   @default("PENDING") // PENDING, COMPLETED, FAILED
@@ -163,6 +177,7 @@ model Payment {
 
 model Address {
   id             Int       @id @default(autoincrement())
+  uiid          String   @default(uuid())
   street         String
   city           String
   state          String
@@ -180,16 +195,19 @@ model Address {
 // site config 
 model Caroussel {
   id       Int    @id @default(autoincrement())
+  uiid              String   @default(uuid())
   imageUrl String
 }
 
 model OffreVisible {
   id        Int     @id @default(autoincrement())
+  uiid              String   @default(uuid())
   productId Int
   product   Product @relation(fields: [productId], references: [id])
 }
 model CyloneOffer {
   id        Int     @id @default(autoincrement())
+   uiid              String   @default(uuid())
   productId Int
   product   Product @relation(fields: [productId], references: [id])
 }

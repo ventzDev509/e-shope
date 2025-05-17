@@ -7,24 +7,20 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateProductDto } from './dto/create-product.dto';
-import { UserRole } from '@prisma/client';
 import { UpdateProductDto } from './dto/update-product.dto';
+import { UserRole } from '@prisma/client';
 
 @Injectable()
 export class ProductService {
-  constructor(private readonly prismaService: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   async getAllProducts() {
     try {
-      const products = await this.prismaService.product.findMany({
+      const products = await this.prisma.product.findMany({
         include: {
           category: true,
           admin: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
-            },
+            select: { id: true, name: true, email: true },
           },
           colors: true,
           sizes: true,
@@ -32,163 +28,177 @@ export class ProductService {
         },
       });
 
-      // Ajout du calcul du prix final avec le rabais pour chaque produit
-      const productsWithFinalPrice = products.map((product) => {
-        // Vérifier si le discount est défini et non nul
-        const finalPrice =
+      return products.map((product) => ({
+        ...product,
+        finalPrice:
           product.discount != null
             ? product.price - (product.price * product.discount) / 100
-            : product.price;
-
-        return {
-          ...product,
-          finalPrice, // Ajout du champ finalPrice dans la réponse
-        };
-      });
-
-      return productsWithFinalPrice;
+            : product.price,
+      }));
     } catch (error) {
       throw new InternalServerErrorException(
-        'An unexpected error occurred while fetching products',
+        "Une erreur est survenue lors de la récupération des produits.",
       );
     }
   }
 
   async getProductById(productId: number) {
-    try {
-      const product = await this.prismaService.product.findUnique({
-        where: {
-          id: productId,
+    const product = await this.prisma.product.findUnique({
+      where: { id: productId },
+      include: {
+        category: true,
+        admin: {
+          select: { id: true, name: true, email: true },
         },
-        include: {
-          category: true,
-          admin: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
-            },
-          },
-          colors: true,
-          sizes: true,
-          additionalImages: true,
-        },
-      });
+        colors: true,
+        sizes: true,
+        additionalImages: true,
+      },
+    });
 
-      if (!product) {
-        throw new NotFoundException(`Product with ID ${productId} not found`);
-      }
-
-      // Vérifier si le discount est défini et non nul
-      const finalPrice =
-        product.discount != null
-          ? product.price - (product.price * product.discount) / 100
-          : product.price;
-
-      // Retourner le produit avec le champ finalPrice ajouté
-      return {
-        ...product,
-        finalPrice, // Ajout du champ finalPrice dans la réponse
-      };
-    } catch (error) {
-      if (error instanceof NotFoundException) {
-        throw error;
-      }
-      throw new InternalServerErrorException(
-        'An unexpected error occurred while fetching the product',
+    if (!product) {
+      throw new NotFoundException(
+        `Produit avec l'identifiant ${productId} introuvable.`,
       );
     }
+
+    return {
+      ...product,
+      finalPrice:
+        product.discount != null
+          ? product.price - (product.price * product.discount) / 100
+          : product.price,
+    };
   }
 
   async getProductsByAdmin(userId: number) {
-    const user = await this.prismaService.user.findUnique({
-      where: { id: userId },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        role: true,
-      },
-    });
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
 
     if (!user || user.role !== UserRole.ADMIN) {
       throw new ForbiddenException(
-        'You do not have permission to view these products.',
+        "Vous n'avez pas la permission d'accéder à ces produits.",
       );
     }
 
-    const products = await this.prismaService.product.findMany({
+    const products = await this.prisma.product.findMany({
       where: { createdBy: userId },
       include: {
-        category: true, // Inclure les informations de catégorie si nécessaire
+        category: true,
+        colors: true,
+        sizes: true,
+        additionalImages: true,
       },
     });
 
-    // Ajout du calcul du prix final avec le rabais pour chaque produit
-    const productsWithFinalPrice = products.map((product) => {
-      // Vérifier si le discount est défini et non nul
-      const finalPrice =
+    return products.map((product) => ({
+      ...product,
+      finalPrice:
         product.discount != null
           ? product.price - (product.price * product.discount) / 100
-          : product.price;
+          : product.price,
+    }));
+  }
+
+  async getProductsByAdminWithPagination(
+    userId: number,
+    page: number = 1,
+    limit: number = 2,
+  ) {
+    try {
+      const user = await this.prisma.user.findUnique({ where: { id: userId } });
+
+    if (!user || user.role !== UserRole.ADMIN) {
+      throw new ForbiddenException(
+        "Vous n'avez pas la permission d'accéder à ces produits.",
+      );
+    }
+
+      const [products, total] = await Promise.all([
+        this.prisma.product.findMany({
+          where: { createdBy: userId },
+          include: {
+            category: true,
+            admin: {
+              select: { id: true, name: true, email: true },
+            },
+            colors: true,
+            sizes: true,
+            additionalImages: true,
+          },
+          skip: (page - 1) * limit,
+          take: limit,
+        }),
+        this.prisma.product.count({ where: { createdBy: userId } }),
+      ]);
+
+      const formattedProducts = products.map((product) => ({
+        ...product,
+        finalPrice:
+        product.discount != null
+          ? product.price - (product.price * product.discount) / 100
+            : product.price,
+      }));
 
       return {
-        ...product,
-        finalPrice, // Ajout du champ finalPrice dans la réponse
+        data: formattedProducts,
+        total,
+        currentPage: page,
+        totalPages: Math.ceil(total / limit),
       };
-    });
-    return productsWithFinalPrice;
+    } catch (error) {
+      console.log(error)
+    }
   }
 
   async createProduct(createProductDto: CreateProductDto, userId: number) {
     const {
       name,
       description,
-      price,
-      stock,
-      categoryId,
       colors,
       sizes,
       imageUrl,
       imageUrls,
-      offer, // Nouveau champ
-      discount, // Nouveau champ
+      offer,
+      price: rawPrice,
+      stock: rawStock,
+      discount: rawDiscount,
+      categoryId: rawCategoryId,
     } = createProductDto;
 
+    const price = Number(rawPrice);
+    const stock = Number(rawStock);
+    const discount = Number(rawDiscount);
+    const categoryId = Number(rawCategoryId)
+
+    const category = await this.prisma.category.findUnique({
+      where: { id: categoryId },
+    });
+
+    if (!category) {
+      throw new NotFoundException(`Catégorie avec l'ID ${categoryId} introuvable.`);
+    }
+
     try {
-      // Vérifier si la catégorie existe
-      const category = await this.prismaService.category.findUnique({
-        where: { id: categoryId },
-      });
-
-      if (!category) {
-        throw new NotFoundException(`Category with ID ${categoryId} not found`);
-      }
-
-      const product = await this.prismaService.product.create({
+      const product = await this.prisma.product.create({
         data: {
           name,
           description,
           price,
           stock,
-          category: {
-            connect: { id: categoryId },
-          },
-          admin: {
-            connect: { id: userId },
-          },
+          imageUrl,
+          offer,
+          discount,
+          category: { connect: { id: categoryId } },
+          admin: { connect: { id: userId } },
           colors: {
-            create: colors?.map((colorName) => ({ name: colorName })),
+            create: colors?.map((name) => ({ name })),
           },
           sizes: {
-            create: sizes?.map((sizeValue) => ({ name: sizeValue })),
+            create: sizes?.map((name) => ({ name })),
           },
-          imageUrl, // Image principale
           additionalImages: {
             create: imageUrls?.map((url) => ({ imageUrls: url })),
           },
-          offer, // Ajouter le champ `offer`
-          discount, // Ajouter le champ `discount`
         },
         include: {
           colors: true,
@@ -199,174 +209,141 @@ export class ProductService {
 
       return product;
     } catch (error) {
-      if (error instanceof ConflictException) {
-        throw error;
-      }
+      console.log(error)
       throw new InternalServerErrorException(
-        'An unexpected error occurred while creating the product',
+        "Erreur lors de la création du produit.",
       );
     }
   }
 
   async updateProduct(
     productId: number,
-    updateProductDto: UpdateProductDto,
+    dto: any,
     userId: number,
   ) {
     const {
       name,
       description,
-      price,
-      stock,
-      categoryId,
       colors,
       sizes,
+      imageUrl,
       imageUrls,
-      offer, // Nouveau champ
-      discount, // Nouveau champ
-    } = updateProductDto;
+      offer,
+      price: rawPrice,
+      stock: rawStock,
+      discount: rawDiscount,
+      categoryId: rawCategoryId,
+    } = dto;
+
+
+    const price = Number(rawPrice);
+    const stock = Number(rawStock);
+    const discount = Number(rawDiscount);
+    const categoryId = Number(rawCategoryId)
+    const product = await this.prisma.product.findUnique({
+      where: { id: productId },
+      include: {
+        additionalImages: true,
+      },
+    });
+
+    if (!product) {
+      throw new NotFoundException('Produit introuvable.');
+    }
+
+    if (product.createdBy !== userId) {
+      throw new ForbiddenException("Vous n'avez pas la permission de modifier ce produit.");
+    }
+
+    const category = await this.prisma.category.findUnique({
+      where: { id: categoryId },
+    });
+
+    if (!category) {
+      throw new NotFoundException(`Catégorie avec l'ID ${categoryId} introuvable.`);
+    }
 
     try {
-      const user = await this.prismaService.user.findUnique({
-        where: { id: userId },
-      });
-
-      if (!user) {
-        throw new ForbiddenException('User not found.');
-      }
-
-      if (user.role !== UserRole.ADMIN) {
-        throw new ForbiddenException(
-          'You do not have permission to update this product.',
-        );
-      }
-
-      const product = await this.prismaService.product.findUnique({
-        where: { id: productId },
-      });
-
-      if (!product) {
-        throw new NotFoundException('Product not found');
-      }
-
-      if (product.createdBy !== userId) {
-        throw new ForbiddenException(
-          'You do not have permission to update this product.',
-        );
-      }
-
-      // Vérifier si la catégorie existe
-      const category = await this.prismaService.category.findUnique({
-        where: { id: categoryId },
-      });
-
-      if (!category) {
-        throw new NotFoundException(`Category with ID ${categoryId} not found`);
-      }
-
-      // Mettre à jour les données principales du produit
-      const updatedProduct = await this.prismaService.product.update({
+      const updatedProduct = await this.prisma.product.update({
         where: { id: productId },
         data: {
           name,
           description,
           price,
           stock,
-          category: {
-            connect: { id: categoryId },
-          },
+          offer,
+          discount,
+          category: { connect: { id: categoryId } },
+          imageUrl: imageUrl || product.imageUrl, 
           colors: {
-            deleteMany: {}, // Supprimer les couleurs existantes
-            create: colors?.map((colorName) => ({ name: colorName })), // Ajouter de nouvelles couleurs
+            deleteMany: {},
+            create: colors?.map((name) => ({ name })) || [],
           },
           sizes: {
-            deleteMany: {}, // Supprimer les tailles existantes
-            create: sizes?.map((sizeValue) => ({ name: sizeValue })), // Ajouter de nouvelles tailles
+            deleteMany: {},
+            create: sizes?.map((name) => ({ name })) || [],
           },
-          offer, // Mettre à jour le champ `offer`
-          discount, // Mettre à jour le champ `discount`
-        },
-        include: {
-          colors: true,
-          sizes: true,
-          additionalImages: true, // Inclure les images associées
         },
       });
 
-      // Mettre à jour les images du produit
       if (imageUrls && imageUrls.length > 0) {
-        // Supprimer les images existantes
-        await this.prismaService.productImage.deleteMany({
-          where: { productId: productId },
-        });
+        await this.prisma.productImage.deleteMany({ where: { productId } });
 
-        // Créer de nouvelles images
-        await this.prismaService.productImage.createMany({
+        await this.prisma.productImage.createMany({
           data: imageUrls.map((url) => ({
+            productId,
             imageUrls: url,
-            productId: updatedProduct.id,
           })),
         });
       }
 
-      return updatedProduct;
+      return await this.prisma.product.findUnique({
+        where: { id: productId },
+        include: {
+          colors: true,
+          sizes: true,
+          additionalImages: true,
+          category: true,
+        },
+      });
     } catch (error) {
-      if (
-        error instanceof NotFoundException ||
-        error instanceof ConflictException ||
-        error instanceof ForbiddenException
-      ) {
-        throw error;
-      }
-
+      console.log(error)
       throw new InternalServerErrorException(
-        'An unexpected error occurred while updating the product',
+        "Erreur lors de la mise à jour du produit.",
       );
     }
   }
 
   async deleteProduct(productId: number, userId: number) {
+    const product = await this.prisma.product.findUnique({
+      where: { id: productId },
+    });
+
+    if (!product) {
+      throw new NotFoundException('Produit introuvable.');
+    }
+
+    if (product.createdBy !== userId) {
+      throw new ForbiddenException(
+        "Vous n'avez pas la permission de supprimer ce produit.",
+      );
+    }
+
     try {
-      const product = await this.prismaService.product.findUnique({
-        where: { id: productId },
-      });
-
-      if (!product) {
-        throw new NotFoundException('Product not found.');
-      }
-
-      if (product.createdBy !== userId) {
-        throw new ForbiddenException(
-          'You do not have permission to delete this product.',
-        );
-      }
-
-      await this.prismaService.product.delete({
-        where: { id: productId },
-      });
-
-      return { message: 'Product successfully deleted.' };
+      await this.prisma.product.delete({ where: { id: productId } });
+      return { message: 'Produit supprimé avec succès.' };
     } catch (error) {
-      if (
-        error instanceof NotFoundException ||
-        error instanceof ForbiddenException
-      ) {
-        throw error;
-      }
-
       throw new InternalServerErrorException(
-        'An unexpected error occurred while deleting the product.',
+        'Erreur lors de la suppression du produit.',
       );
     }
   }
 
   async searchProductsByName(name: string) {
-    const lowerCaseName = name.toLowerCase();
-
-    const products = await this.prismaService.product.findMany({
+    const products = await this.prisma.product.findMany({
       where: {
         name: {
-          contains: lowerCaseName,
+          contains: name,
         },
       },
       include: {
@@ -377,116 +354,81 @@ export class ProductService {
     });
 
     if (products.length === 0) {
-      throw new NotFoundException('No products found with the given name');
+      throw new NotFoundException(
+        "Aucun produit trouvé avec le nom fourni.",
+      );
     }
 
-    // Ajout du calcul du prix final avec le rabais pour chaque produit
-    const productsWithFinalPrice = products.map((product) => {
-      // Vérifier si le discount est défini et non nul
-      const finalPrice =
+    return products.map((product) => ({
+      ...product,
+      finalPrice:
         product.discount != null
           ? product.price - (product.price * product.discount) / 100
-          : product.price;
-
-      return {
-        ...product,
-        finalPrice, // Ajout du champ finalPrice dans la réponse
-      };
-    });
-
-    return productsWithFinalPrice;
+          : product.price,
+    }));
   }
 
   async searchProductsByNameByAdmin(name: string, userId: number) {
-    const lowerCaseName = name.toLowerCase();
-
-    const products = await this.prismaService.product.findMany({
+    const products = await this.prisma.product.findMany({
       where: {
         name: {
-          contains: lowerCaseName,
+          contains: name,
         },
         createdBy: userId,
       },
       include: {
         colors: true,
         sizes: true,
+        additionalImages: true,
       },
     });
 
     if (products.length === 0) {
-      throw new NotFoundException('No products found with the given name');
-    }
-    // Ajout du calcul du prix final avec le rabais pour chaque produit
-    const productsWithFinalPrice = products.map((product) => {
-      // Vérifier si le discount est défini et non nul
-      const finalPrice =
-        product.discount != null
-          ? product.price - (product.price * product.discount) / 100
-          : product.price;
-
-      return {
-        ...product,
-        finalPrice, // Ajout du champ finalPrice dans la réponse
-      };
-    });
-
-    return productsWithFinalPrice;
-  }
-
-  async getProductsByCategory(categoryId: number) {
-    try {
-      const category = await this.prismaService.category.findUnique({
-        where: { id: categoryId },
-      });
-
-      // if (!category) {
-      //   throw new NotFoundException(`Category with ID ${categoryId} not found`);
-      // }
- 
-      const products = await this.prismaService.product.findMany({
-        where: { categoryId: categoryId },
-        include: {
-          category: true,
-          colors: true,
-          sizes: true,
-          additionalImages: true,
-          admin: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
-            },
-          },
-        },
-      });
-
-      if (products.length === 0) {
-        throw new NotFoundException(
-          `No products found for category with ID ${categoryId}`,
-        );
-      }
-      // Ajout du calcul du prix final avec le rabais pour chaque produit
-      const productsWithFinalPrice = products.map((product) => {
-        // Vérifier si le discount est défini et non nul
-        const finalPrice =
-          product.discount != null
-            ? product.price - (product.price * product.discount) / 100
-            : product.price;
-
-        return {
-          ...product,
-          finalPrice, // Ajout du champ finalPrice dans la réponse
-        };
-      });
-
-      return productsWithFinalPrice;
-    } catch (error) {
-      if (error instanceof NotFoundException) {
-        throw error;
-      }
-      throw new InternalServerErrorException(
-        'An unexpected error occurred while fetching products by category',
+      throw new NotFoundException(
+        "Aucun produit trouvé pour cet administrateur avec ce nom.",
       );
     }
+
+    return products.map((product) => ({
+      ...product,
+      finalPrice:
+        product.discount != null
+          ? product.price - (product.price * product.discount) / 100
+          : product.price,
+    }));
   }
+
+  async getProductsByCategory(id: number) {
+    const category = await this.prisma.category.findFirst({
+      where: {
+        id
+      },
+    });
+
+    if (!category) {
+      throw new NotFoundException(
+        `Catégorie  introuvable.`,
+      );
+    }
+
+    const products = await this.prisma.product.findMany({
+      where: {
+        categoryId: category.id,
+      },
+      include: {
+        colors: true,
+        sizes: true,
+        additionalImages: true,
+      },
+    });
+
+    return products.map((product) => ({
+      ...product,
+      finalPrice:
+        product.discount != null
+          ? product.price - (product.price * product.discount) / 100
+          : product.price,
+    }));
+  }
+
 }

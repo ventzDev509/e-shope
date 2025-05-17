@@ -8,7 +8,7 @@ async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule); // Notez l'utilisation de NestExpressApplication
 
   // app.useGlobalPipes(new ValidationPipe());
-  const PORT=process.env.APP_PORT
+  const PORT = process.env.APP_PORT || 3000
   
   const config = new DocumentBuilder()
     .setTitle(' Projects Gestion ')
@@ -26,7 +26,7 @@ async function bootstrap() {
   }); 
   const cors = {
     origin: function (origin, callback) {
-      const allowedOrigins = [process.env.LINK,'http://gh.free.nf' ,'http://localhost:5173'];
+      const allowedOrigins = ['http://localhost:5173', 'http://gh.free.nf', 'http://localhost:5173'];
       if (allowedOrigins.indexOf(origin) !== -1 || !origin) {
         callback(null, true); // Allow the request
       } else {

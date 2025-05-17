@@ -1,4 +1,4 @@
-import { $Enums, UserRole } from '@prisma/client';
+import { $Enums } from '@prisma/client';
 import { LoginDto } from './dto/login-user-dto';
 import {
   BadRequestException,
@@ -12,14 +12,13 @@ import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateUserDto } from './dto/regisration-dto';
-import { v4 as uuidv4 } from 'uuid';
 import { usersService } from 'src/users/users.service';
 import { PasswordService } from './password.service';
-import * as nodemailer from 'nodemailer';
 import { randomBytes } from 'crypto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { MailService } from 'src/mailer/mailer.service';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { ExceptionsHandler } from '@nestjs/core/exceptions/exceptions-handler';
 
 @Injectable()
 export class AuthService {
@@ -29,9 +28,9 @@ export class AuthService {
     private userservice: usersService,
     private readonly passwordService: PasswordService,
     private readonly mailerService: MailService, // Injection de MailerService
-  ) {}
+  ) { }
 
-  async login(loginDto: LoginDto): Promise<{ token: string }> {
+  async login(loginDto: LoginDto): Promise<{ token: string, isConfirm: boolean, isAdmin: boolean }> {
     const { username, password } = loginDto;
 
     // Trouver l'utilisateur avec l'email fourni
@@ -41,6 +40,10 @@ export class AuthService {
     // Vérifie si l'utilisateur existe
     if (!user) {
       throw new NotFoundException('User not found');
+    }
+    // Vérifie si l'utilisateur existe
+    if (!user.isEmailConfirmed) {
+      throw new UnauthorizedException('Email not confrimed');
     }
 
     // Vérifie la validité du mot de passe
@@ -56,17 +59,142 @@ export class AuthService {
 
     // Génère un token JWT
     const token = this.jwtservice.sign({ username: user.email });
+    const isConfirm = user.isEmailConfirmed
+    let isAdmin = user.role == "ADMIN" ? true : false
+    return { token, isConfirm, isAdmin };
+  }
+  async createWithGoogle(googleUser: {
+    email: string;
+    name: string;
+    image: string;
+  }) {
+    const existingUser = await this.prismaService.user.findUnique({
+      where: { email: googleUser.email },
+    });
 
-    return { token };
+    if (existingUser) return existingUser;
+
+    const randomPassword = await bcrypt.hash(randomBytes(32).toString('hex'), 10);
+
+
+    return await this.prismaService.user.create({
+      data: {
+        email: googleUser.email,
+        name: googleUser.name,
+        profile: googleUser.image,
+        provider: 'google',
+        password: randomPassword,
+        isEmailConfirmed: true
+      },
+    });
+  }
+  async loginWithGoogle(googleUser: {
+    email: string;
+    name: string;
+    image: string;
+  }) {
+    let user = await this.prismaService.user.findUnique({
+      where: { email: googleUser.email },
+    });
+
+    if (!user) {
+      user = await this.createWithGoogle(googleUser);
+    }
+
+    const payload = { sub: user.id, email: user.email };
+    const token = this.jwtservice.sign({ username: user.email });
+    return {
+      access_token: token,
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        profile: user.profile,
+        provider: user.provider,
+      },
+    };
   }
 
-  async create(createUserDto: CreateUserDto) {
-    const { name, email, password, role } = createUserDto;
-
-    const users = await this.userservice.create(createUserDto);
-    return {
-      token: this.jwtservice.sign({ username: users.email }),
+  async generateToken(user: any) {
+    const payload = {
+      sub: user.id,
+      email: user.email,
+      role: user.role,
     };
+
+    return {
+      access_token: this.jwtservice.sign(payload),
+      user,
+    };
+  }
+
+
+  async create(createUserDto: CreateUserDto) {
+    try {
+      // 1. Vérifier si l'utilisateur avec cet email existe déjà
+      const existingUser = await this.prismaService.user.findUnique({
+        where: { email: createUserDto.email },
+      });
+
+      if (existingUser) {
+        // Si l'email existe déjà, renvoyer une erreur explicite sans planter le serveur
+        throw new Error('Un compte avec cet email existe déjà.');
+      }
+
+      // 2. Création de l'utilisateur
+      const user = await this.userservice.create(createUserDto);
+
+      // 3. Génération d’un token unique de confirmation
+      const confirmationToken = randomBytes(32).toString('hex');
+
+      // 4. Enregistrement du token dans la base
+      await this.prismaService.user.update({
+        where: { id: user.id },
+        data: { confirmationToken },
+      });
+
+      // 5. Envoi de l'email de confirmation
+      const confirmUrl = `${process.env.LINK}/confirm-email?token=${confirmationToken}`;
+
+      try {
+        // Envoi de l'email dans un bloc try...catch pour capturer les erreurs de connexion SMTP
+        await this.mailerService.sendConfirmationEmail(user.email, confirmUrl);
+      } catch (emailError) {
+        console.error('Erreur lors de l\'envoi de l\'email de confirmation:', emailError.message);
+        // Tu peux envoyer un message de retour indiquant un échec, mais ne pas faire échouer l'inscription
+      }
+
+      // 6. Retourner un message (optionnel)
+      return {
+        message: 'Inscription réussie. Veuillez confirmer votre email.',
+      };
+    } catch (error) {
+      console.error('Erreur lors de l\'inscription de l\'utilisateur:', error.message);
+      throw new ExceptionsHandler(error.message || 'Une erreur est survenue lors de l\'inscription de l\'utilisateur.');
+    }
+  }
+
+
+  async confirmEmail(token: string) {
+    // Recherche de l'utilisateur avec ce token
+    const user = await this.prismaService.user.findFirst({
+      where: { confirmationToken: token },
+    });
+
+    if (!user) {
+      throw new NotFoundException('Token invalide ou utilisateur non trouvé.');
+    }
+
+    // Mise à jour de l'utilisateur pour confirmer l'email
+    await this.prismaService.user.update({
+      where: { id: user.id },
+      data: {
+        isEmailConfirmed: true,
+        confirmationToken: null,
+      },
+    });
+
+    return { message: 'Email confirmé avec succès.' };
   }
 
   async updateUser(userId: number, updateUserDto: UpdateUserDto, imageUrl) {
@@ -108,7 +236,7 @@ export class AuthService {
     delete updatedUser.password;
     delete updatedUser.resetPasswordToken;
     delete updatedUser.resetPasswordExpires;
-    
+
     return updatedUser;
   }
 
@@ -191,7 +319,7 @@ export class AuthService {
         throw error;
       }
       throw new InternalServerErrorException(
-        'An unexpected error occurred while creating the user',
+        'Erreur lors de la réinitialisation',
       );
     }
   }

@@ -10,10 +10,11 @@ import { usersService } from 'src/users/users.service';
 import { usersModule } from 'src/users/users.module';
 import { PasswordService } from './password.service';
 import { MailModule } from 'src/mailer/mailer.module';
+import { GoogleStrategy } from './google.strategy';
 
 @Module({
   controllers: [AuthController,],
-  providers: [AuthService, PrismaService, JwtStrategy, usersService,PasswordService],
+  providers: [AuthService, PrismaService, JwtStrategy, usersService, PasswordService, GoogleStrategy],
   imports: [
     usersModule,
     PassportModule,

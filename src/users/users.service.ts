@@ -74,6 +74,8 @@ export class usersService {
     return this.prisma.user.findUnique({
       where: { email },
     });
+
+    return 
   }
 
   async remove(id: number) {

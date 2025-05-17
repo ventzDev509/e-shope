@@ -14,83 +14,121 @@ import { UserRole } from '@prisma/client';
 export class CategoriesService {
   constructor(private readonly prismaService: PrismaService) {}
 
-  async create(createCategoryDto: CreateCategoryDto, userId: number,imageUrl:string) {
-    const { name } = createCategoryDto;
+  async create(createCategoryDto: CreateCategoryDto, userId: number) {
+    const { name, imageUrl } = createCategoryDto;
 
-    // Vérifie si l'utilisateur est un administrateur
     const user = await this.prismaService.user.findUnique({
       where: { id: userId },
     });
 
     if (!user) {
-      throw new ForbiddenException('User not found.');
+      throw new ForbiddenException("Utilisateur non trouvé.");
     }
 
     if (user.role !== UserRole.ADMIN) {
-      throw new ForbiddenException(
-        'You do not have permission to create a category.',
-      );
+      throw new ForbiddenException("Vous n'avez pas la permission de créer une catégorie.");
     }
 
     try {
-      // Vérifie si une catégorie avec le même nom existe déjà
       const existingCategory = await this.prismaService.category.findUnique({
         where: { name },
       });
 
       if (existingCategory) {
-        throw new ConflictException(
-          'A category with this name already exists.',
-        );
+        throw new ConflictException("Une catégorie avec ce nom existe déjà.");
       }
 
-      // Crée la nouvelle catégorie
       const category = await this.prismaService.category.create({
-        data: { name,imageUrl },
+        data: { name, imageUrl },
       });
-      if (category) {
-        return category;
-      }
-    } catch (error) {
-      // Gère les erreurs internes de manière appropriée
-      throw new ConflictException('A category with this name already exists.');
-    }
-  } 
 
-  async update(id: number, updateCategoryDto: UpdateCategoryDto,imageUrl:string) {
-    const { name } = updateCategoryDto;
+      return category;
+    } catch (error) {
+      throw new ConflictException("Une catégorie avec ce nom existe déjà.");
+    }
+  }
+
+  async update(id: number, updateCategoryDto: UpdateCategoryDto) {
+    const { name, imageUrl } = updateCategoryDto;
 
     try {
-      // Vérifie si la catégorie existe
       const existingCategory = await this.prismaService.category.findUnique({
         where: { id },
       });
 
       if (!existingCategory) {
-        throw new NotFoundException('Category not found.');
+        throw new NotFoundException("Catégorie non trouvée.");
       }
 
-      // Met à jour la catégorie
       const updatedCategory = await this.prismaService.category.update({
         where: { id },
-        data: { name,imageUrl },
+        data: { name, imageUrl },
       });
 
       return updatedCategory;
     } catch (error) {
       if (error instanceof NotFoundException) {
-        throw error; // Catégorie non trouvée
-      } else {
-        throw new InternalServerErrorException(
-          'An unexpected error occurred while updating the category.',
-        );
+        throw error;
       }
+      throw new InternalServerErrorException(
+        "Une erreur inattendue est survenue lors de la mise à jour de la catégorie.",
+      );
     }
   }
+
   async getAllCategry() {
-    const response = await this.prismaService.category.findMany();
-    if (response) {
-      return response;
+    return await this.prismaService.category.findMany();
+  }
+
+  async getCategoryById(id: number) {
+    const category = await this.prismaService.category.findUnique({
+      where: { id },
+    });
+
+    if (!category) {
+      throw new NotFoundException("Catégorie non trouvée.");
     }
+
+    return category;
+  }
+
+  async getAllCategryPagination(page: number = 1, limit: number = 3) {
+    const skip = (page - 1) * limit;
+
+    try {
+      const [categories, total] = await Promise.all([
+        this.prismaService.category.findMany({
+          skip,
+          take: limit,
+          orderBy: { createdAt: 'desc' },
+        }),
+        this.prismaService.category.count(),
+      ]);
+
+      return {
+        data: categories,
+        total,
+        page,
+        lastPage: Math.ceil(total / limit),
+      };
+    } catch (error) {
+      throw new InternalServerErrorException(
+        "Une erreur est survenue lors de la récupération des catégories avec pagination.",
+      );
+    }
+  }
+
+  async delete(id: number) {
+    const ifExist = await this.prismaService.category.findUnique({
+      where: { id },
+    });
+
+    if (!ifExist) {
+      throw new NotFoundException("Catégorie non trouvée.");
+    }
+
+    return await this.prismaService.category.delete({
+      where: { id },
+    });
   }
 }

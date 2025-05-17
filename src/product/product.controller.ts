@@ -1,5 +1,3 @@
-// src/product/product.controller.ts
-
 import {
   BadRequestException,
   Body,
@@ -8,6 +6,7 @@ import {
   Get,
   HttpException,
   HttpStatus,
+  InternalServerErrorException,
   Param,
   ParseIntPipe,
   Post,
@@ -16,6 +15,7 @@ import {
   Req,
   Res,
   UploadedFile,
+  UploadedFiles,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
@@ -23,47 +23,63 @@ import { ProductService } from './product.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { JwtAuthGuard } from 'src/authentificaion/auth.guard';
 import { UpdateProductDto } from './dto/update-product.dto';
-import { FileInterceptor } from '@nestjs/platform-express';
+import { AnyFilesInterceptor, FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
+import { ImageUploadService } from './../image-upload/image-upload.service';
+import { PaginationQueryDto } from './dto/pagination.dto';
+
 @Controller('products')
 export class ProductController {
-  constructor(private readonly productService: ProductService) {}
+  constructor(
+    private readonly productService: ProductService,
+    private readonly imageUploadService: ImageUploadService,
+  ) { }
 
   @Get()
   async getAllProduct() {
     return await this.productService.getAllProducts();
   }
+  @UseGuards(JwtAuthGuard)
+  @Get('paginated')
+  async getAllProductPaginated(@Query('page') page = '1', @Query('limit') limit = '3', @Req() req) {
+    const userId = req.user.id;
+    const pageNumber = parseInt(page, 10);
+    const limitNumber = parseInt(limit, 10);
+    return await this.productService.getProductsByAdminWithPagination(userId, pageNumber, limitNumber);
+  }
+
+
   @Get(':id')
   async getAllProductById(@Param('id', ParseIntPipe) productId: number) {
     return await this.productService.getProductById(productId);
   }
 
+
+
   @Get('admin')
   @UseGuards(JwtAuthGuard)
-  async getProductsByAdmin(@Req() req, @Res() res) { 
+  async getProductsByAdmin(@Req() req, @Res() res) {
     const userId = req.user.id;
     try {
       const products = await this.productService.getProductsByAdmin(userId);
       return res.status(HttpStatus.OK).json(products);
     } catch (error) {
-      // Handle known exceptions
       if (error instanceof HttpException) {
         return res.status(error.getStatus()).json({ message: error.message });
       }
-      // Handle unexpected errors
       return res
         .status(HttpStatus.INTERNAL_SERVER_ERROR)
-        .json({ message: 'An unexpected error occurred' });
+        .json({ message: 'Une erreur inattendue s’est produite.' });
     }
   }
+
   @Post('image')
   @UseInterceptors(
     FileInterceptor('image', {
       storage: diskStorage({
-        destination: './uploads', // Dossier où les images seront stockées
+        destination: './uploads',
         filename: (req, file, cb) => {
-          // Générer un nom de fichier unique en utilisant la date et un identifiant aléatoire
           const uniqueSuffix =
             Date.now() + '-' + Math.round(Math.random() * 1e9);
           const ext = extname(file.originalname);
@@ -73,7 +89,10 @@ export class ProductController {
       }),
       fileFilter: (req, file, cb) => {
         if (!file.mimetype.match(/\/(jpg|jpeg|png|webp)$/)) {
-          cb(new BadRequestException('Only image files are allowed!'), false);
+          cb(
+            new BadRequestException('Seuls les fichiers image sont autorisés.'),
+            false,
+          );
         } else {
           cb(null, true);
         }
@@ -82,31 +101,46 @@ export class ProductController {
   )
   async uploadImage(@UploadedFile() file: Express.MulterFile) {
     if (!file) {
-      throw new BadRequestException('No file uploaded');
+      throw new BadRequestException('Aucun fichier n’a été envoyé.');
     }
 
-    // Construire l'URL complète de l'image téléchargée
-    const baseUrl = process.env.UPLOAD_LINK; // Remplacez par l'URL de votre serveur
+    const baseUrl = process.env.UPLOAD_LINK;
     const imageUrl = `${baseUrl}/uploads/${file.filename}`;
 
     return {
-      message: 'Image uploaded successfully',
+      message: 'Image téléchargée avec succès.',
       filePath: file.path,
       fileName: file.filename,
-      imageUrl: imageUrl, // Retourner l'URL complète de l'image
+      imageUrl: imageUrl,
     };
   }
 
   @Post()
   @UseGuards(JwtAuthGuard)
+  @UseInterceptors(AnyFilesInterceptor())
   async createProduct(
     @Body() createProductDto: CreateProductDto,
-    @UploadedFile() file: Express.MulterFile,
+    @UploadedFiles() files: Express.Multer.File[],
     @Req() req,
     @Res() res,
   ) {
-    const userId = req.user.id; // Assuming user ID is available in the request
-    const imagePath = file?.path; // Get the file path from the uploaded file
+    const userId = req.user.id;
+    const primaryFile = files.find(file => file.fieldname === 'primaryFile');
+    const secondaryFiles = files.filter(file =>
+      file.fieldname.startsWith('secondaryFile_'),
+    );
+
+    if (!primaryFile) {
+      throw new Error('L’image principale est requise.');
+    }
+
+    const primaryUpload = await this.imageUploadService.uploadImage(primaryFile);
+    const secondaryUploads = await Promise.all(
+      secondaryFiles.map(file => this.imageUploadService.uploadImage(file)),
+    );
+
+    createProductDto.imageUrl = primaryUpload.url || '';
+    createProductDto.imageUrls = secondaryUploads.map(upload => upload.url) || [];
 
     try {
       const product = await this.productService.createProduct(
@@ -115,43 +149,69 @@ export class ProductController {
       );
       return res.status(HttpStatus.CREATED).json(product);
     } catch (error) {
-      // Handle known exceptions
       if (error instanceof HttpException) {
         return res.status(error.getStatus()).json({ message: error.message });
       }
 
-      // Handle unexpected errors
       return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
-        message: 'An unexpected error occurred while creating the product',
+        message: 'Une erreur inattendue est survenue lors de la création du produit.',
       });
     }
   }
 
   @Put(':id')
   @UseGuards(JwtAuthGuard)
+  @UseInterceptors(AnyFilesInterceptor())
   async updateProduct(
-    @Param('id', ParseIntPipe) productId: number,
-    @Body() updateProductDto: UpdateProductDto,
+    @Param('id', ParseIntPipe) id: number,
+    @Body() updateProductDto: any,
+    @UploadedFiles() files: Express.Multer.File[],
     @Req() req,
     @Res() res,
   ) {
     const userId = req.user.id;
+    // Trouver les fichiers selon leur nom de champ
+    const primaryFile = files?.find(file => file.fieldname === 'primaryFile');
+    const secondaryFiles = files?.filter(file =>
+      file.fieldname.startsWith('secondaryFile_'),
+    );
+
     try {
+      // Si une nouvelle image principale est envoyée
+      if (primaryFile) {
+        const primaryUpload = await this.imageUploadService.uploadImage(primaryFile);
+        updateProductDto.imageUrl = primaryUpload.url;
+      }
+
+      // Si des nouvelles images secondaires sont envoyées
+      if (secondaryFiles && secondaryFiles.length > 0) {
+        const secondaryUploads = await Promise.all(
+          secondaryFiles.map(file => this.imageUploadService.uploadImage(file)),
+        );
+        updateProductDto.imageUrls = secondaryUploads.map(upload => upload.url);
+      }
+
       const updatedProduct = await this.productService.updateProduct(
-        productId,
+        id,
         updateProductDto,
         userId,
       );
+
       return res.status(HttpStatus.OK).json(updatedProduct);
     } catch (error) {
+      console.log(error)
       if (error instanceof HttpException) {
         return res.status(error.getStatus()).json({ message: error.message });
       }
-      return res
-        .status(HttpStatus.INTERNAL_SERVER_ERROR)
-        .json({ message: 'An unexpected error occurred' });
+      console.log(updateProductDto)
+      return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+        message: 'Une erreur est survenue lors de la mise à jour du produit.',
+      });
     }
   }
+
+
+
   @Delete(':id')
   @UseGuards(JwtAuthGuard)
   async deleteProduct(
@@ -162,17 +222,14 @@ export class ProductController {
     const userId = req.user.id;
     try {
       const result = await this.productService.deleteProduct(productId, userId);
-      return res.status(HttpStatus.OK).json(result); // Return success message
+      return res.status(HttpStatus.OK).json(result);
     } catch (error) {
-      // Handle known exceptions
       if (error instanceof HttpException) {
         return res.status(error.getStatus()).json({ message: error.message });
       }
-
-      // Handle unexpected errors
       return res
         .status(HttpStatus.INTERNAL_SERVER_ERROR)
-        .json({ message: 'An unexpected error occurred' });
+        .json({ message: 'Une erreur inattendue s’est produite.' });
     }
   }
 

@@ -16,6 +16,8 @@ import {
   UseInterceptors,
   HttpException,
   ParseIntPipe,
+  Query,
+  Delete,
 } from '@nestjs/common';
 
 import { CreateCategoryDto } from './dto/create-category.dto';
@@ -33,124 +35,76 @@ import { FileInterceptor } from '@nestjs/platform-express';
 @Controller('categories')
 export class CategoriesController {
   constructor(private readonly categoriesService: CategoriesService) {}
+
   @Get()
   async getAll() {
     return await this.categoriesService.getAllCategry();
   }
+
+  @Get('pagination')
+  async getLimit(@Query('page') page = '1', @Query('limit') limit = '3') {
+    const pageNumber = parseInt(page, 10);
+    const limitNumber = parseInt(limit, 10);
+    return await this.categoriesService.getAllCategryPagination(pageNumber, limitNumber);
+  }
+
+  @UseGuards(JwtAuthGuard)
   @Post()
-  @UseGuards(JwtAuthGuard)
-  @UseInterceptors(
-    FileInterceptor('image', {
-      storage: diskStorage({
-        destination: './uploads', // Dossier où les images seront stockées
-        filename: (req, file, cb) => {
-          // Générer un nom de fichier unique en utilisant la date et un identifiant aléatoire
-          const uniqueSuffix =
-            Date.now() + '-' + Math.round(Math.random() * 1e9);
-          const ext = extname(file.originalname);
-          const filename = `${file.fieldname}-${uniqueSuffix}${ext}`;
-          cb(null, filename);
-        },
-      }),
-      fileFilter: (req, file, cb) => {
-        if (!file.mimetype.match(/\/(jpg|jpeg|png|gif)$/)) {
-          cb(new BadRequestException('Only image files are allowed!'), false);
-        } else {
-          cb(null, true);
-        }
-      },
-    }),
-  )
-  async uploadImage(
-    @UploadedFile() file: Express.MulterFile,
-    @Req() req,
-    @Res() res,
-    @Body() CreateCategoryDto: CreateCategoryDto,
-  ) {
-    if (!file) {
-      throw new BadRequestException('No file uploaded');
-    }
-
+  async create(@Req() req, @Res() res, @Body() createCategoryDto: CreateCategoryDto) {
     try {
-      // Construire l'URL complète de l'image téléchargée
-      const baseUrl = process.env.UPLOAD_LINK; // Remplacez par l'URL de votre serveur
-      const imageUrl = `${baseUrl}/uploads/${file.filename}`;
       const userId = req.user.id;
-      const category = await this.categoriesService.create(
-        CreateCategoryDto,
-        userId,
-        imageUrl,
-      );
-      return res.status(200).json({ message: 'Category Added Successfully' });
+      await this.categoriesService.create(createCategoryDto, userId);
+      return res.status(201).json({ message: 'Catégorie ajoutée avec succès.' });
     } catch (error) {
-      // Handle known exceptions
       if (error instanceof HttpException) {
         return res.status(error.getStatus()).json({ message: error.message });
       }
-
-      // Handle unexpected errors
       return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
-        message: 'An unexpected error occurred while creating the product',
+        message: 'Une erreur inattendue est survenue lors de la création de la catégorie.',
       });
     }
   }
 
-  @Put(':id')
   @UseGuards(JwtAuthGuard)
-  @UseInterceptors(
-    FileInterceptor('image', {
-      storage: diskStorage({
-        destination: './uploads', // Dossier où les images seront stockées
-        filename: (req, file, cb) => {
-          // Générer un nom de fichier unique en utilisant la date et un identifiant aléatoire
-          const uniqueSuffix =
-            Date.now() + '-' + Math.round(Math.random() * 1e9);
-          const ext = extname(file.originalname);
-          const filename = `${file.fieldname}-${uniqueSuffix}${ext}`;
-          cb(null, filename);
-        },
-      }),
-      fileFilter: (req, file, cb) => {
-        if (!file.mimetype.match(/\/(jpg|jpeg|png|gif)$/)) {
-          cb(new BadRequestException('Only image files are allowed!'), false);
-        } else {
-          cb(null, true);
-        }
-      },
-    }),
-  )
+  @Put(':id')
   async update(
-    @UploadedFile() file: Express.MulterFile,
     @Req() req,
     @Res() res,
-    @Body() CreateCategoryDto: CreateCategoryDto,
-    @Param('id',ParseIntPipe) id: number,
+    @Body() updateCategoryDto: CreateCategoryDto,
+    @Param('id', ParseIntPipe) id: number,
   ) {
-    if (!file) {
-      throw new BadRequestException('No file uploaded');
-    }
-
     try {
-      // Construire l'URL complète de l'image téléchargée
-      const baseUrl = process.env.UPLOAD_LINK; // Remplacez par l'URL de votre serveur
-      const imageUrl = `${baseUrl}/uploads/${file.filename}`;
-      const category = await this.categoriesService.update(
-        id,
-        CreateCategoryDto,
-        imageUrl,
-      );
-      return res.json({ message: 'Category Update Successfully' });
+      await this.categoriesService.update(id, updateCategoryDto);
+      return res.json({ message: 'Catégorie mise à jour avec succès.' });
     } catch (error) {
-      // Handle known exceptions
       if (error instanceof HttpException) {
         return res.status(error.getStatus()).json({ message: error.message });
       }
-
-      // Handle unexpected errors
       return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
-        message: 'An unexpected error occurred while creating the product',
+        message: 'Une erreur inattendue est survenue lors de la mise à jour de la catégorie.',
       });
     }
   }
 
+  @Get(':id')
+  async getById(@Param('id', ParseIntPipe) id: number) {
+    return await this.categoriesService.getCategoryById(id);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Delete(':id')
+  async delete(@Param('id', ParseIntPipe) id: number, @Req() req, @Res() res) {
+    try {
+      await this.categoriesService.delete(id);
+      return res.json({ message: 'Catégorie supprimée avec succès.' });
+    } catch (error) {
+      console.log(error);
+      if (error instanceof HttpException) {
+        return res.status(error.getStatus()).json({ message: error.message });
+      }
+      return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+        message: 'Une erreur inattendue est survenue lors de la suppression de la catégorie.',
+      });
+    }
+  }
 }
