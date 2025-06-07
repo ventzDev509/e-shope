@@ -1,8 +1,8 @@
 datasource db {
-  provider = "mysql"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
-  
 }
+
 
 generator client {
   provider = "prisma-client-js"
@@ -53,6 +53,7 @@ model Product {
   createdBy        Int
   admin            User           @relation(fields: [createdBy], references: [id])
   colors           Color[]        @relation("ProductColors")
+  feature           Feature[]     @relation("ProductFeatures")
   sizes            Size[]         @relation("ProductSizes")
   additionalImages ProductImage[] // Relation to additional images
   offer            String? // Champs pour ajouter une offre spéciale, facultatif
@@ -72,10 +73,19 @@ model ProductImage {
 
 model Color {
   id        Int     @id @default(autoincrement())
-   uiid              String   @default(uuid())
+  uiid              String   @default(uuid())
   name      String
   productId Int
   product   Product @relation(fields: [productId], references: [id], onDelete: Cascade, name: "ProductColors")
+}
+
+
+model Feature {
+  id        Int     @id @default(autoincrement())
+  uiid      String   @default(uuid())
+  name      String
+  productId Int
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade, name: "ProductFeatures")
 }
 
 model Size {

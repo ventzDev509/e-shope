@@ -4,6 +4,7 @@ import {
   IsString,
   IsNumber,
   IsPositive,
+  ArrayNotEmpty,
 } from 'class-validator';
 
 export class UpdateProductDto {
@@ -49,6 +50,12 @@ export class UpdateProductDto {
   @IsOptional()
   @IsString({ message: 'L\'offre doit être une chaîne de caractères.' })
   offer?: string;
+
+  
+  @IsArray({ message: 'Les caracteristiques doivent être un tableau.' })
+  @ArrayNotEmpty({ message: 'Au moins une caracteristique est requise.' })
+  @IsString({ each: true, message: 'Chaque caracteristique doit être une chaîne de caractères.' })
+  feature: string[];
 
   @IsOptional()
   @IsNumber({}, { message: 'La remise doit être un nombre.' })

@@ -27,7 +27,7 @@ export class AuthService {
     private jwtservice: JwtService,
     private userservice: usersService,
     private readonly passwordService: PasswordService,
-    private readonly mailerService: MailService, // Injection de MailerService
+    private readonly mailerService: MailService, 
   ) { }
 
   async login(loginDto: LoginDto): Promise<{ token: string, isConfirm: boolean, isAdmin: boolean }> {

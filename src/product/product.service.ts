@@ -41,6 +41,51 @@ export class ProductService {
       );
     }
   }
+  async getProductsWithPagination(
+    page: number = 1,
+    limit: number = 2,
+  ) {
+    try {
+      // Récupérer total des produits
+      const total = await this.prisma.product.count();
+
+      // Récupérer les produits paginés
+      const products = await this.prisma.product.findMany({
+        include: {
+          category: true,
+          admin: {
+            select: { id: true, name: true, email: true },
+          },
+          colors: true,
+          sizes: true,
+          additionalImages: true,
+          feature: true,
+        },
+        skip: (page - 1) * limit,
+        take: limit,
+      });
+
+      // Calculer le prix final avec discount
+      const formattedProducts = products.map((product) => ({
+        ...product,
+        finalPrice:
+          product.discount != null
+            ? product.price - (product.price * product.discount) / 100
+            : product.price,
+      }));
+
+      return {
+        data: formattedProducts,
+        total,
+        currentPage: page,
+        totalPages: Math.ceil(total / limit),
+      };
+    } catch (error) {
+      console.log(error);
+      throw error; // ou retourner null/undefined selon le besoin
+    }
+  }
+
 
   async getProductById(productId: number) {
     const product = await this.prisma.product.findUnique({
@@ -53,6 +98,7 @@ export class ProductService {
         colors: true,
         sizes: true,
         additionalImages: true,
+        feature: true,
       },
     });
 
@@ -107,11 +153,11 @@ export class ProductService {
     try {
       const user = await this.prisma.user.findUnique({ where: { id: userId } });
 
-    if (!user || user.role !== UserRole.ADMIN) {
-      throw new ForbiddenException(
-        "Vous n'avez pas la permission d'accéder à ces produits.",
-      );
-    }
+      if (!user || user.role !== UserRole.ADMIN) {
+        throw new ForbiddenException(
+          "Vous n'avez pas la permission d'accéder à ces produits.",
+        );
+      }
 
       const [products, total] = await Promise.all([
         this.prisma.product.findMany({
@@ -124,6 +170,7 @@ export class ProductService {
             colors: true,
             sizes: true,
             additionalImages: true,
+            feature: true,
           },
           skip: (page - 1) * limit,
           take: limit,
@@ -134,8 +181,8 @@ export class ProductService {
       const formattedProducts = products.map((product) => ({
         ...product,
         finalPrice:
-        product.discount != null
-          ? product.price - (product.price * product.discount) / 100
+          product.discount != null
+            ? product.price - (product.price * product.discount) / 100
             : product.price,
       }));
 
@@ -163,6 +210,7 @@ export class ProductService {
       stock: rawStock,
       discount: rawDiscount,
       categoryId: rawCategoryId,
+      feature
     } = createProductDto;
 
     const price = Number(rawPrice);
@@ -199,6 +247,10 @@ export class ProductService {
           additionalImages: {
             create: imageUrls?.map((url) => ({ imageUrls: url })),
           },
+          feature: {
+            create: feature?.map((name) => ({ name })),
+          },
+
         },
         include: {
           colors: true,
@@ -233,6 +285,7 @@ export class ProductService {
       stock: rawStock,
       discount: rawDiscount,
       categoryId: rawCategoryId,
+      feature
     } = dto;
 
 
@@ -274,14 +327,18 @@ export class ProductService {
           offer,
           discount,
           category: { connect: { id: categoryId } },
-          imageUrl: imageUrl || product.imageUrl, 
+          imageUrl: imageUrl || product.imageUrl,
           colors: {
             deleteMany: {},
-            create: colors?.map((name) => ({ name })) || [],
+            create: colors?.map((name: string) => ({ name })) || [],
           },
           sizes: {
             deleteMany: {},
-            create: sizes?.map((name) => ({ name })) || [],
+            create: sizes?.map((name: string) => ({ name })) || [],
+          },
+          feature: {
+            deleteMany: {},
+            create: feature?.map((name: string) => ({ name })) || [],
           },
         },
       });
@@ -290,7 +347,7 @@ export class ProductService {
         await this.prisma.productImage.deleteMany({ where: { productId } });
 
         await this.prisma.productImage.createMany({
-          data: imageUrls.map((url) => ({
+          data: imageUrls.map((url: any) => ({
             productId,
             imageUrls: url,
           })),
@@ -380,6 +437,7 @@ export class ProductService {
         colors: true,
         sizes: true,
         additionalImages: true,
+        feature: true,
       },
     });
 
@@ -398,37 +456,50 @@ export class ProductService {
     }));
   }
 
-  async getProductsByCategory(id: number) {
+  async getProductsByCategory(id: number, page = 1, limit = 10) {
     const category = await this.prisma.category.findFirst({
-      where: {
-        id
-      },
+      where: { id },
     });
 
     if (!category) {
-      throw new NotFoundException(
-        `Catégorie  introuvable.`,
-      );
+      throw new NotFoundException(`Catégorie introuvable.`);
     }
 
-    const products = await this.prisma.product.findMany({
-      where: {
-        categoryId: category.id,
-      },
-      include: {
-        colors: true,
-        sizes: true,
-        additionalImages: true,
-      },
-    });
+    const skip = (page - 1) * limit;
 
-    return products.map((product) => ({
+    const [products, total] = await Promise.all([
+      this.prisma.product.findMany({
+        where: { categoryId: category.id },
+        include: {
+          colors: true,
+          sizes: true,
+          additionalImages: true,
+          feature: true,
+        },
+        skip,
+        take: limit,
+        orderBy: { createdAt: 'desc' }, // optionnel, pour trier
+      }),
+      this.prisma.product.count({
+        where: { categoryId: category.id },
+      }),
+    ]);
+
+    const data = products.map((product) => ({
       ...product,
       finalPrice:
         product.discount != null
           ? product.price - (product.price * product.discount) / 100
           : product.price,
     }));
+
+    return {
+      data,
+      total,
+      page,
+      totalPages: Math.ceil(total / limit),
+    };
   }
+
 
 }

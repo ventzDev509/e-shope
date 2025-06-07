@@ -40,6 +40,12 @@ export class ProductController {
   async getAllProduct() {
     return await this.productService.getAllProducts();
   }
+  @Get('withPagination')
+  async getAllProductWithPagination(@Query('page') page = '1', @Query('limit') limit = '3', @Req() req) {
+    const pageNumber = parseInt(page, 10);
+    const limitNumber = parseInt(limit, 10);
+    return await this.productService.getProductsWithPagination(pageNumber, limitNumber);
+  }
   @UseGuards(JwtAuthGuard)
   @Get('paginated')
   async getAllProductPaginated(@Query('page') page = '1', @Query('limit') limit = '3', @Req() req) {
@@ -48,6 +54,9 @@ export class ProductController {
     const limitNumber = parseInt(limit, 10);
     return await this.productService.getProductsByAdminWithPagination(userId, pageNumber, limitNumber);
   }
+
+
+
 
 
   @Get(':id')
@@ -245,8 +254,16 @@ export class ProductController {
     return this.productService.searchProductsByNameByAdmin(name, userId);
   }
 
+
   @Get('category/:id')
-  async getProductsByCategory(@Param('id', ParseIntPipe) categoryId: number) {
-    return this.productService.getProductsByCategory(categoryId);
+  async getProductsByCategory(
+    @Param('id', ParseIntPipe) categoryId: number,
+    @Query('page') page= '1', 
+    @Query('limit') limit = '10',
+  ) {
+     const pageNumber = parseInt(page, 10);
+    const limitNumber = parseInt(limit, 10);
+    return this.productService.getProductsByCategory(categoryId, pageNumber, limitNumber);
   }
+
 }

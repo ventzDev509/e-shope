@@ -83,6 +83,9 @@ export class CategoriesService {
   async getCategoryById(id: number) {
     const category = await this.prismaService.category.findUnique({
       where: { id },
+      include:{
+        products: true
+      }
     });
 
     if (!category) {
@@ -101,8 +104,12 @@ export class CategoriesService {
           skip,
           take: limit,
           orderBy: { createdAt: 'desc' },
+          include:{
+            products: true
+          }
         }),
         this.prismaService.category.count(),
+        
       ]);
 
       return {

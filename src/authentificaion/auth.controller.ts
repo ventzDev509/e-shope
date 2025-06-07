@@ -55,7 +55,7 @@ export class AuthController {
         });
       }
 
-      // Génère un token JWT
+      // Génère le token JWT
       const t = this.jwtservice.sign({ username: user.email });
 
       delete user.password

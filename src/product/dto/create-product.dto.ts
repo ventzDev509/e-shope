@@ -44,6 +44,10 @@ export class CreateProductDto {
   @ArrayNotEmpty({ message: 'Au moins une taille est requise.' })
   @IsString({ each: true, message: 'Chaque taille doit être une chaîne de caractères.' })
   sizes: string[];
+  @IsArray({ message: 'Les caracteristiques doivent être un tableau.' })
+  @ArrayNotEmpty({ message: 'Au moins une caracteristique est requise.' })
+  @IsString({ each: true, message: 'Chaque caracteristique doit être une chaîne de caractères.' })
+  feature: string[];
 
   @IsNotEmpty({ message: 'L\'image principale est requise.' })
   @IsString({ message: 'L\'URL de l\'image principale doit être une chaîne de caractères.' })
@@ -61,6 +65,6 @@ export class CreateProductDto {
   @Type(() => Number)
   @IsOptional()
   @IsNumber({}, { message: 'La remise doit être un nombre.' })
-  @IsPositive({ message: 'La remise doit être un nombre positif.' })
+  // @IsPositive({ message: 'La remise doit être un nombre positif.' })
   discount?: number;
 }
