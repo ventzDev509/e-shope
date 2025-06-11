@@ -21,16 +21,9 @@ import {
 } from '@nestjs/common';
 
 import { CreateCategoryDto } from './dto/create-category.dto';
-import { UpdateCategoryDto } from './dto/update-category.dto';
-import {
-  NotFoundException,
-  ConflictException,
-  InternalServerErrorException,
-} from '@nestjs/common';
+
 import { JwtAuthGuard } from 'src/authentificaion/auth.guard';
 import { CategoriesService } from './categories.service';
-import { extname } from 'path';
-import { FileInterceptor } from '@nestjs/platform-express';
 
 @Controller('categories')
 export class CategoriesController {

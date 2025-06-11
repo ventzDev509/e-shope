@@ -20,26 +20,26 @@ export class CartService {
     });
 
     if (!cart) {
-      throw new NotFoundException('Cart not found');
+      throw new NotFoundException('Panier non trouvé');
     }
 
     return cart;
   }
 
   async addItemToCart(userId: number, createCartItemDto: CreateCartItemDto) {
-    const { productId, quantity,colors,sizes } = createCartItemDto;
+    const { productId, quantity, colors, sizes } = createCartItemDto;
   
     try {
-      // Check if the product exists
+      // Vérifier si le produit existe
       const product = await this.prisma.product.findUnique({
         where: { id: productId },
       });
   
       if (!product) {
-        throw new Error('Product not found.');
+        throw new Error('Produit non trouvé.');
       }
   
-      // Find or create the cart
+      // Trouver ou créer le panier
       let cart = await this.prisma.cart.findUnique({
         where: { userId },
       });
@@ -51,50 +51,31 @@ export class CartService {
           },
         });
       }
-  
-      // // Check if the item already exists in the cart
-      // const existingCartItem = await this.prisma.cartItem.findFirst({
-      //   where: {
-      //     cartId: cart.id,
-      //     productId,
-      //   },
-      // });
-  
-      let cartItem;
-      // if (existingCartItem) {
-      //   // Update existing item quantity
-      //   cartItem = await this.prisma.cartItem.update({
-      //     where: { id: existingCartItem.id },
-      //     data: { quantity: existingCartItem.quantity + quantity },
-      //   });
-      // } else {
-        // Create new cart item
-        cartItem = await this.prisma.cartItem.create({
-          data: {
-            cartId: cart.id,
-            productId,
-            quantity,
-            colors,
-            sizes
-          },
-        });
-      // }
-  
-      // Return success message
+
+      // Créer un nouvel article dans le panier
+      const cartItem = await this.prisma.cartItem.create({
+        data: {
+          cartId: cart.id,
+          productId,
+          quantity,
+          colors,
+          sizes,
+        },
+      });
+
+      // Retourner un message de succès
       return {
         success: true,
-        message: 'Item added to cart successfully.',
+        message: 'Article ajouté au panier avec succès.',
         cartItem,
       };
   
     } catch (error) {
-      // Log the error for debugging purposes
-      console.error('Error adding item to cart:', error);
+      console.error('Erreur lors de l\'ajout de l\'article au panier :', error);
   
-      // Return error message
       return {
         success: false,
-        message: error.message || 'Unable to add item to cart. Please try again later.',
+        message: error.message || 'Impossible d\'ajouter l\'article au panier. Veuillez réessayer plus tard.',
       };
     }
   }  
@@ -111,7 +92,7 @@ export class CartService {
     });
 
     if (!cartItem || cartItem.cartId !== cart.id) {
-      throw new NotFoundException('Cart item not found');
+      throw new NotFoundException('Article du panier non trouvé');
     }
 
     return this.prisma.cartItem.update({
@@ -128,7 +109,7 @@ export class CartService {
     });
 
     if (!cartItem || cartItem.cartId !== cart.id) {
-      throw new NotFoundException('Cart item not found');
+      throw new NotFoundException('Article du panier non trouvé');
     }
 
     return this.prisma.cartItem.delete({
@@ -143,6 +124,6 @@ export class CartService {
       where: { cartId: cart.id },
     });
 
-    return { message: 'Cart cleared successfully' };
+    return { message: 'Panier vidé avec succès' };
   }
 }

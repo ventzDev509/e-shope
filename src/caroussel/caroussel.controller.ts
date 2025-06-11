@@ -1,6 +1,5 @@
 import { diskStorage } from 'multer';
 import {
-
   Post,
   Body,
   Param,
@@ -8,7 +7,6 @@ import {
   Delete,
   UploadedFile,
   Req,
- 
   BadRequestException,
   HttpException,
   HttpStatus,
@@ -16,71 +14,44 @@ import {
   UseInterceptors,
   Put,
   ParseIntPipe,
+  UploadedFiles,
+  Query,
 } from '@nestjs/common';
 import { Controller, Get, Res } from '@nestjs/common';
 import { Response } from 'express';
 import { CarousselService } from './caroussel.service';
-import { CreateCarousselDto } from './dto/create-caroussel.dto';
-import { UpdateCarousselDto } from './dto/update-caroussel.dto';
 import { JwtAuthGuard } from 'src/authentificaion/auth.guard';
-import { FileInterceptor } from '@nestjs/platform-express';
-import { extname } from 'path';
+import { ImageUploadService } from './../image-upload/image-upload.service';
+import { CreateCarousselDto } from './dto/create-caroussel.dto';
 
 @Controller('caroussels')
 export class CarousselController {
-  constructor(private readonly carousselService: CarousselService) {}
+  constructor(
+    private readonly carousselService: CarousselService,
+    private readonly imageUploadService: ImageUploadService,
+  ) { }
 
-  @Post()
-  @UseGuards(JwtAuthGuard)
-  @UseInterceptors(
-    FileInterceptor('image', {
-      storage: diskStorage({
-        destination: './uploads', // Dossier où les images seront stockées
-        filename: (req, file, cb) => {
-          // Générer un nom de fichier unique en utilisant la date et un identifiant aléatoire
-          const uniqueSuffix =
-            Date.now() + '-' + Math.round(Math.random() * 1e9);
-          const ext = extname(file.originalname);
-          const filename = `${file.fieldname}-${uniqueSuffix}${ext}`;
-          cb(null, filename);
-        },
-      }),
-      fileFilter: (req, file, cb) => {
-        if (!file.mimetype.match(/\/(jpg|jpeg|png|gif)$/)) {
-          cb(new BadRequestException('Only image files are allowed!'), false);
-        } else {
-          cb(null, true);
-        }
-      },
-    }),
-  )
+  @Post('')
   async uploadImage(
-    @UploadedFile() file: Express.MulterFile,
     @Req() req,
     @Res() res,
+    @Body() createCarousselDto: CreateCarousselDto,
   ) {
-    if (!file) {
-      throw new BadRequestException('No file uploaded');
-    }
-
     try {
-      // Construire l'URL complète de l'image téléchargée
-      const baseUrl = process.env.UPLOAD_LINK; // Remplacez par l'URL de votre serveur
-      const imageUrl = `${baseUrl}/uploads/${file.filename}`;
-      const caroussel = await this.carousselService.create({
-        imageUrl,
-      });
-      return res.status(200).json({ message: 'carousel Added Successfully' });
+      await this.carousselService.create(createCarousselDto);
+      return res
+        .status(200)
+        .json({ message: 'Carrousel ajouté avec succès.' });
     } catch (error) {
       console.log(error);
-      // Handle known exceptions
       if (error instanceof HttpException) {
-        return res.status(error.getStatus()).json({ message: error.message });
+        return res
+          .status(error.getStatus())
+          .json({ message: error.message });
       }
-
-      // Handle unexpected errors
       return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
-        message: 'An unexpected error occurred while creating the product',
+        message:
+          'Une erreur inattendue est survenue lors de la création du carrousel.',
       });
     }
   }
@@ -89,20 +60,31 @@ export class CarousselController {
   async findAll(@Res() res: Response) {
     try {
       const response = await this.carousselService.findAll();
-      
-      // Définir les en-têtes CORS
+
       res.setHeader('Access-Control-Allow-Origin', '*');
-      res.setHeader('Access-Control-Allow-Methods', 'GET,HEAD,PUT,PATCH,POST,DELETE');
-      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-  
-      // Renvoyer la réponse JSON
+      res.setHeader(
+        'Access-Control-Allow-Methods',
+        'GET,HEAD,PUT,PATCH,POST,DELETE',
+      );
+      res.setHeader(
+        'Access-Control-Allow-Headers',
+        'Content-Type, Authorization',
+      );
+
       res.json(response);
     } catch (error) {
-      console.error('Erreur lors de la récupération des carrousels:', error);
-      res.status(500).json({ message: 'Erreur serveur' });
+      console.error('Erreur lors de la récupération des carrousels :', error);
+      res.status(500).json({ message: 'Erreur serveur.' });
     }
   }
-  
+
+
+  @Get('pagination')
+  async getLimit(@Query('page') page = '1', @Query('limit') limit = '3') {
+    const pageNumber = parseInt(page, 10);
+    const limitNumber = parseInt(limit, 10);
+    return await this.carousselService.findWithPagination(pageNumber, limitNumber);
+  }
 
   @Get(':id')
   @UseGuards(JwtAuthGuard)
@@ -110,32 +92,8 @@ export class CarousselController {
     return this.carousselService.findOne(id);
   }
 
-
-
   @Put(':id')
   @UseGuards(JwtAuthGuard)
-  @UseInterceptors(
-    FileInterceptor('image', {
-      storage: diskStorage({
-        destination: './uploads', // Dossier où les images seront stockées
-        filename: (req, file, cb) => {
-          // Générer un nom de fichier unique en utilisant la date et un identifiant aléatoire
-          const uniqueSuffix =
-            Date.now() + '-' + Math.round(Math.random() * 1e9);
-          const ext = extname(file.originalname);
-          const filename = `${file.fieldname}-${uniqueSuffix}${ext}`;
-          cb(null, filename);
-        },
-      }),
-      fileFilter: (req, file, cb) => {
-        if (!file.mimetype.match(/\/(jpg|jpeg|png|gif)$/)) {
-          cb(new BadRequestException('Only image files are allowed!'), false);
-        } else {
-          cb(null, true);
-        }
-      },
-    }),
-  )
   async update(
     @Param('id', ParseIntPipe) id: number,
     @UploadedFile() file: Express.MulterFile,
@@ -143,32 +101,41 @@ export class CarousselController {
     @Res() res,
   ) {
     if (!file) {
-      throw new BadRequestException('No file uploaded');
+      throw new BadRequestException('Aucun fichier n\'a été téléchargé.');
     }
 
     try {
-      // Construire l'URL complète de l'image téléchargée
-      const baseUrl = process.env.UPLOAD_LINK; // Remplacez par l'URL de votre serveur
+      const baseUrl = process.env.UPLOAD_LINK;
       const imageUrl = `${baseUrl}/uploads/${file.filename}`;
-      const caroussel = await this.carousselService.update(id, {imageUrl});
-      return res.status(200).json({ message: 'carousel Update Successfully' });
+      const caroussel = await this.carousselService.update(id, { imageUrl });
+      return res
+        .status(200)
+        .json({ message: 'Carrousel mis à jour avec succès.' });
     } catch (error) {
       console.log(error);
-      // Handle known exceptions
       if (error instanceof HttpException) {
-        return res.status(error.getStatus()).json({ message: error.message });
+        return res
+          .status(error.getStatus())
+          .json({ message: error.message });
       }
 
-      // Handle unexpected errors
       return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
-        message: 'An unexpected error occurred while creating the product',
+        message:
+          'Une erreur inattendue est survenue lors de la mise à jour du carrousel.',
       });
     }
   }
 
   @Delete(':id')
   @UseGuards(JwtAuthGuard)
-  async remove(@Param('id') id: number) {
-    return this.carousselService.remove(id);
+  async remove(@Param('id', ParseIntPipe) id: number) {
+    try {
+      const res = await this.carousselService.remove(id);
+      if(res){
+        return ({ message: 'Catégorie supprimée avec succès.' })
+      }
+    } catch (error) {
+      console.log(error)
+    }
   }
 }

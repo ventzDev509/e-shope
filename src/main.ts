@@ -5,11 +5,11 @@ import { NestExpressApplication } from '@nestjs/platform-express';
 import { join } from 'path';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 async function bootstrap() {
-  const app = await NestFactory.create<NestExpressApplication>(AppModule); 
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
   // app.useGlobalPipes(new ValidationPipe());
   const PORT = process.env.APP_PORT || 3000
-  
+
   const config = new DocumentBuilder()
     .setTitle(' Projects Gestion ')
     .setDescription('A project gestion api create by american pie ')
@@ -22,8 +22,8 @@ async function bootstrap() {
     prefix: '/uploads/',
     setHeaders: (res, path, stat) => {
       res.set('Access-Control-Allow-Origin', '*');
-    }, 
-  }); 
+    },
+  });
   const cors = {
     origin: function (origin, callback) {
       const allowedOrigins = ['http://localhost:5173', 'http://gh.free.nf', 'http://localhost:5173'];
@@ -31,14 +31,16 @@ async function bootstrap() {
         callback(null, true); // Allow the request
       } else {
         callback(new Error('Not allowed by CORS')); // Reject the request
-      } 
+      }
     },
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
-  };   
-   
-  app.enableCors(cors);    
-     
-  await app.listen(PORT);  
-}  
-bootstrap(); 
- 
+  };
+
+  app.enableCors({
+    origin: '*',
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+  });
+
+  await app.listen(PORT);
+}
+bootstrap();

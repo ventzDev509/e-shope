@@ -101,8 +101,8 @@ export class AuthService {
       user = await this.createWithGoogle(googleUser);
     }
 
-    const payload = { sub: user.id, email: user.email };
     const token = this.jwtservice.sign({ username: user.email });
+     let isAdmin = user.role == "ADMIN" ? true : false
     return {
       access_token: token,
       user: {
@@ -111,6 +111,7 @@ export class AuthService {
         email: user.email,
         profile: user.profile,
         provider: user.provider,
+        isAdmin:isAdmin
       },
     };
   }

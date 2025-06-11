@@ -64,8 +64,8 @@ export class AuthController {
       delete user.provider
       delete user.resetPasswordExpires
       delete user.resetPasswordToken
-
-      return res.status(200).json({ t, user });
+ let isAdmin = user.role == "ADMIN" ? true : false
+      return res.status(200).json({ t, user,isAdmin });
     } catch (error) {
       console.error('Google Token Verification Error:', error);
       return res.status(HttpStatus.UNAUTHORIZED).json({ message: 'Invalid Google token' });

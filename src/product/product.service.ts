@@ -157,7 +157,7 @@ export class ProductService {
         throw new ForbiddenException(
           "Vous n'avez pas la permission d'accéder à ces produits.",
         );
-      }
+      } 
 
       const [products, total] = await Promise.all([
         this.prisma.product.findMany({
