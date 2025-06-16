@@ -1,8 +1,7 @@
 datasource db {
-  provider = "postgres"
+  provider = "mysql"
   url      = env("DATABASE_URL")
 }
-
 
 generator client {
   provider = "prisma-client-js"
@@ -16,12 +15,12 @@ model User {
   password             String
   telephone            String    @default("")
   adress               String    @default("")
-  isEmailConfirmed Boolean @default(false)
-  confirmationToken String?
+  isEmailConfirmed     Boolean   @default(false)
+  confirmationToken    String?
   role                 UserRole  @default(CUSTOMER) // Utilisation de l'énum avec valeur par défaut
   resetPasswordToken   String?   @unique
   resetPasswordExpires DateTime?
-  provider          String   @default("local")
+  provider             String    @default("local")
   orders               Order[]
   cart                 Cart?
   reviews              Review[]
@@ -38,7 +37,7 @@ enum UserRole {
 
 model Product {
   id               Int            @id @default(autoincrement())
-  uiid              String   @default(uuid())
+  uiid             String         @default(uuid())
   name             String
   description      String
   price            Float
@@ -53,7 +52,7 @@ model Product {
   createdBy        Int
   admin            User           @relation(fields: [createdBy], references: [id])
   colors           Color[]        @relation("ProductColors")
-  feature           Feature[]     @relation("ProductFeatures")
+  feature          Feature[]      @relation("ProductFeatures")
   sizes            Size[]         @relation("ProductSizes")
   additionalImages ProductImage[] // Relation to additional images
   offer            String? // Champs pour ajouter une offre spéciale, facultatif
@@ -65,7 +64,7 @@ model Product {
 
 model ProductImage {
   id        Int     @id @default(autoincrement())
-   uiid              String   @default(uuid())
+  uiid      String  @default(uuid())
   imageUrls String
   productId Int
   product   Product @relation(fields: [productId], references: [id])
@@ -73,16 +72,15 @@ model ProductImage {
 
 model Color {
   id        Int     @id @default(autoincrement())
-  uiid              String   @default(uuid())
+  uiid      String  @default(uuid())
   name      String
   productId Int
   product   Product @relation(fields: [productId], references: [id], onDelete: Cascade, name: "ProductColors")
 }
 
-
 model Feature {
   id        Int     @id @default(autoincrement())
-  uiid      String   @default(uuid())
+  uiid      String  @default(uuid())
   name      String
   productId Int
   product   Product @relation(fields: [productId], references: [id], onDelete: Cascade, name: "ProductFeatures")
@@ -90,7 +88,7 @@ model Feature {
 
 model Size {
   id        Int     @id @default(autoincrement())
-   uiid              String   @default(uuid())
+  uiid      String  @default(uuid())
   name      String
   productId Int
   product   Product @relation(fields: [productId], references: [id], onDelete: Cascade, name: "ProductSizes")
@@ -98,7 +96,7 @@ model Size {
 
 model Category {
   id        Int       @id @default(autoincrement())
-   uiid              String   @default(uuid())
+  uiid      String    @default(uuid())
   name      String    @unique
   imageUrl  String
   products  Product[]
@@ -106,33 +104,32 @@ model Category {
   updatedAt DateTime  @updatedAt
 }
 
-
 model Order {
   id                Int         @id @default(autoincrement())
-   uiid              String   @default(uuid())
+  uiid              String      @default(uuid())
   total             Float
-  status            String      @default("PENDING") 
+  status            String      @default("PENDING")
   userId            Int
   user              User        @relation(fields: [userId], references: [id])
   addressId         Int
   address           Address     @relation(fields: [addressId], references: [id]) // Associe chaque commande à une adresse
   items             OrderItem[]
   payments          Payment[]
-  estimatedDelivery DateTime?   // Champ pour stocker le temps de livraison estimé
+  estimatedDelivery DateTime? // Champ pour stocker le temps de livraison estimé
   createdAt         DateTime    @default(now())
   updatedAt         DateTime    @updatedAt
 }
 
 model OrderItem {
   id        Int      @id @default(autoincrement())
-   uiid              String   @default(uuid())
+  uiid      String   @default(uuid())
   quantity  Int
   price     Float
   productId Int
   product   Product  @relation(fields: [productId], references: [id])
   orderId   Int
   order     Order    @relation(fields: [orderId], references: [id])
-  colors    String 
+  colors    String
   sizes     String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -140,7 +137,7 @@ model OrderItem {
 
 model Cart {
   id     Int        @id @default(autoincrement())
-   uiid              String   @default(uuid())
+  uiid   String     @default(uuid())
   userId Int        @unique
   user   User       @relation(fields: [userId], references: [id])
   items  CartItem[]
@@ -148,10 +145,10 @@ model Cart {
 
 model CartItem {
   id        Int      @id @default(autoincrement())
-   uiid              String   @default(uuid())
+  uiid      String   @default(uuid())
   quantity  Int
   productId Int
-  colors    String 
+  colors    String
   sizes     String
   product   Product  @relation(fields: [productId], references: [id])
   cartId    Int
@@ -162,7 +159,7 @@ model CartItem {
 
 model Review {
   id        Int      @id @default(autoincrement())
-   uiid              String   @default(uuid())
+  uiid      String   @default(uuid())
   rating    Int
   comment   String?
   productId Int
@@ -175,7 +172,7 @@ model Review {
 
 model Payment {
   id        Int      @id @default(autoincrement())
-   uiid              String   @default(uuid())
+  uiid      String   @default(uuid())
   amount    Float
   method    String   @default("moncash") // Ajoutez ce champ pour indiquer le mode de paiement
   status    String   @default("PENDING") // PENDING, COMPLETED, FAILED
@@ -186,8 +183,12 @@ model Payment {
 }
 
 model Address {
-  id             Int       @id @default(autoincrement())
-  uiid          String   @default(uuid())
+  id             Int      @id @default(autoincrement())
+  uiid           String   @default(uuid())
+  firstName      String
+  lastName       String
+  email          String   
+  phone          String?
   street         String
   city           String
   state          String
@@ -196,28 +197,30 @@ model Address {
   telephone      String
   addressDetails String
   userId         Int
-  user           User      @relation(fields: [userId], references: [id])
-  orders         Order[]   // Relation avec plusieurs commandes
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  user           User     @relation(fields: [userId], references: [id])
+  orders         Order[] // Relation avec plusieurs commandes
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  default        Boolean  @default(false)
 }
 
 // site config 
 model Caroussel {
   id       Int    @id @default(autoincrement())
-  uiid              String   @default(uuid())
+  uiid     String @default(uuid())
   imageUrl String
 }
 
 model OffreVisible {
   id        Int     @id @default(autoincrement())
-  uiid              String   @default(uuid())
+  uiid      String  @default(uuid())
   productId Int
   product   Product @relation(fields: [productId], references: [id])
 }
+
 model CyloneOffer {
   id        Int     @id @default(autoincrement())
-   uiid              String   @default(uuid())
+  uiid      String  @default(uuid())
   productId Int
   product   Product @relation(fields: [productId], references: [id])
 }

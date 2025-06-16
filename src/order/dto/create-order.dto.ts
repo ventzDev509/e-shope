@@ -1,13 +1,14 @@
-import { 
-  IsNotEmpty, 
-  IsNumber, 
-  IsString, 
-  IsOptional, 
-  IsArray, 
-  ValidateNested, 
-  IsDate 
+import {
+  IsNotEmpty,
+  IsNumber,
+  IsString,
+  IsOptional,
+  IsArray,
+  ValidateNested,
+  IsDate
 } from 'class-validator';
 import { Type } from 'class-transformer';
+import { CreateAddressDto } from 'src/address/dto/create-address.dto';
 
 class OrderItemDto {
   @IsNotEmpty()
@@ -33,23 +34,25 @@ class OrderItemDto {
   @IsArray()
   @IsString({ each: true })
   sizes?: string[];
-  
+
 }
 
 class PaymentDto {
   @IsNotEmpty()
   @IsNumber()
   amount: number;
-
   @IsOptional()
   @IsString()
-  status?: string; // Par exemple: 'PENDING', 'COMPLETED', 'FAILED'
+  method:string;
+  @IsOptional()
+  @IsString()
+  status?: string; // 'PENDING', 'COMPLETED', 'FAILED'
 }
 
 export class CreateOrderDto {
   @IsOptional()
   @IsString()
-  status?: string; // Par exemple: 'PENDING', 'COMPLETED', 'CANCELLED'
+  status?: string; //  'PENDING', 'COMPLETED', 'CANCELLED'
 
   @IsOptional()
   @IsArray()
@@ -62,11 +65,17 @@ export class CreateOrderDto {
   @ValidateNested({ each: true })
   @Type(() => PaymentDto)
   payments?: PaymentDto[];
+  @IsOptional()
   @IsNumber()
-  addressId :number;
+  addressId?: number;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => CreateAddressDto)
+  newAddress?: CreateAddressDto;
   @IsOptional()
   @IsDate()
   @Type(() => Date)
-  estimatedDelivery?: Date; // Champ pour le temps de livraison estimé, si nécessaire
-  
+  estimatedDelivery?: Date;
+
 }

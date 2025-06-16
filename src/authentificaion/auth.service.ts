@@ -277,6 +277,8 @@ export class AuthService {
     delete user.password;
     delete user.resetPasswordExpires;
     delete user.resetPasswordToken;
+    delete user.confirmationToken;
+    delete user.provider;
 
     return user;
   }

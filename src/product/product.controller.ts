@@ -22,12 +22,10 @@ import {
 import { ProductService } from './product.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { JwtAuthGuard } from 'src/authentificaion/auth.guard';
-import { UpdateProductDto } from './dto/update-product.dto';
-import { AnyFilesInterceptor, FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
+import { AnyFilesInterceptor, FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
 import { ImageUploadService } from './../image-upload/image-upload.service';
-import { PaginationQueryDto } from './dto/pagination.dto';
 
 @Controller('products')
 export class ProductController {

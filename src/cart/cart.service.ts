@@ -5,15 +5,19 @@ import { UpdateCartItemDto } from './dto/update-cart-item.dto';
 
 @Injectable()
 export class CartService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   async getCartByUser(userId: number) {
     const cart = await this.prisma.cart.findUnique({
       where: { userId },
+
       include: {
         items: {
           include: {
             product: true,
+          },
+          orderBy: {
+            createdAt: 'asc',
           },
         },
       },
@@ -28,22 +32,22 @@ export class CartService {
 
   async addItemToCart(userId: number, createCartItemDto: CreateCartItemDto) {
     const { productId, quantity, colors, sizes } = createCartItemDto;
-  
+
     try {
       // Vérifier si le produit existe
       const product = await this.prisma.product.findUnique({
         where: { id: productId },
       });
-  
+
       if (!product) {
         throw new Error('Produit non trouvé.');
       }
-  
+
       // Trouver ou créer le panier
       let cart = await this.prisma.cart.findUnique({
         where: { userId },
       });
-  
+
       if (!cart) {
         cart = await this.prisma.cart.create({
           data: {
@@ -69,17 +73,17 @@ export class CartService {
         message: 'Article ajouté au panier avec succès.',
         cartItem,
       };
-  
+
     } catch (error) {
       console.error('Erreur lors de l\'ajout de l\'article au panier :', error);
-  
+
       return {
         success: false,
         message: error.message || 'Impossible d\'ajouter l\'article au panier. Veuillez réessayer plus tard.',
       };
     }
-  }  
-  
+  }
+
   async updateCartItem(
     userId: number,
     cartItemId: number,

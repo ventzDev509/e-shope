@@ -1,34 +1,20 @@
-import { Controller, Get, Param, Post, Body, Res } from '@nestjs/common';
+import { Controller, Get, Param, Post, Body, Res, Query } from '@nestjs/common';
 import { PaymentsService } from './payments.service';
 
 @Controller('payments')
 export class PaymentsController {
-  constructor(private readonly paymentsService: PaymentsService) {}
+  constructor(private readonly paymentsService: PaymentsService) { }
 
-  @Get('capture/:orderId')
-  async capturePayment(@Param('orderId') orderId: string) {
-    try {
-      const capture = await this.paymentsService.capturePaymentByOrderId(orderId);
-      return capture;
-    } catch (error) {
-      return {
-        message: 'Payment capture failed',
-        error: error.message,
-      };
-    }
+  @Post('pay')
+  async createPayment(@Body() body: { orderId: string; amount: number }) {
+    return this.paymentsService.createPayment(body.orderId, body.amount);
   }
 
-  @Post('create')
-  async createPayment(@Body() body: { amount: number },@Res()res) {
-    try {
-      const { amount } = body;
-      const payment = await this.paymentsService.createPayment(amount);
-      return res.json(payment);
-    } catch (error) {
-      return {
-        message: 'Payment creation failed',
-        error: error.message,
-      };
-    }
-  }
+  // @Get('redirect')
+  // async redirect(@Query('token') token: string, @Res() res: Response) {
+  //   // Tu peux enregistrer le token dans la base si besoin
+  //   res.send(`Paiement reçu, token: ${token}`);
+  // }
+
+  
 }

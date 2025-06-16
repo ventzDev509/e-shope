@@ -5,27 +5,59 @@ import { UpdateAddressDto } from './dto/update-address.dto';
 
 @Injectable()
 export class AddressService {
-  constructor(private readonly prismaService: PrismaService) {}
+  constructor(private readonly prismaService: PrismaService) { }
 
   async createAddress(createAddressDto: CreateAddressDto, userId: number) {
+    const {
+      firstName,
+      lastName,
+      email,
+      telephone,
+      street,
+      city,
+      state,
+      zipCode,
+      country,
+      addressDetails,
+    } = createAddressDto;
+
+    // Vérifie si l'utilisateur a déjà une adresse
+    const existingAddresses = await this.prismaService.address.findMany({
+      where: { userId },
+    });
+    const isFirstAddress = existingAddresses.length === 0;
+
+    // Crée l'adresse liée à l'utilisateur 
     return await this.prismaService.address.create({
       data: {
-        ...createAddressDto,
+        firstName,
+        lastName,
+        email,
+        telephone,
+        street,
+        city,
+        state: state ?? '',
+        zipCode: zipCode ?? '',
+        country: country ?? 'Haïti',
+        addressDetails,
+        default: isFirstAddress,
         user: {
           connect: { id: userId },
         },
-       
-        // Ne pas inclure 'orderId' ici, Prisma gère cette relation via 'order'
       },
     });
-  } 
-  
-   
+  }
+
+
+
+
+
+
   async getUserAddresses(userId: number) {
     return this.prismaService.address.findMany({
-      where: { userId }, 
+      where: { userId },
     });
-  } 
+  }
 
   async getAddressById(id: number, userId: number) {
     const address = await this.prismaService.address.findFirst({

@@ -27,7 +27,7 @@ export class AddressController {
     @Req() req,
     @Res() res,
   ) {
-    const userId = req.user.id; // Obtenez l'ID de l'utilisateur à partir du JWT ou de la session
+    const userId = req.user.id; 
     const response = await this.addressService.createAddress(
       createAddressDto,
       userId,
@@ -35,6 +35,7 @@ export class AddressController {
     return res.status(200).json({
       success: true,
       data: response,
+      message: 'Adresse ajoutée avec succès !'
     });
   }
 
