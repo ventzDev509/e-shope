@@ -133,18 +133,17 @@ export class OrderService {
             include: {
               product: {
                 include: {
-                  additionalImages: true, // Inclure les images du produit
+                  additionalImages: true, 
                 },
               },
             },
           },
-          payments: true, // Inclure les paiements
-          user: true, // Inclure les informations de l'utilisateur
-          address: true, // Inclure les détails de l'adresse dans la réponse
+          payments: true, 
+          user: true,
+          address: true, 
         },
       });
 
-      // Supprimer les champs `password` et `role` des données de l'utilisateur dans les commandes
       orders.forEach((order) => {
         if (order.user) {
           delete order.user.password;
@@ -154,6 +153,7 @@ export class OrderService {
 
       return orders;
     } catch (error) {
+      console.log(error)
       throw new InternalServerErrorException(
         'An unexpected error occurred while retrieving the orders',
       );

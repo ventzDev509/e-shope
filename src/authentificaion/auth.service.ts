@@ -198,7 +198,7 @@ export class AuthService {
     return { message: 'Email confirmé avec succès.' };
   }
 
-  async updateUser(userId: number, updateUserDto: UpdateUserDto, imageUrl) {
+  async updateUser(userId: number, updateUserDto: UpdateUserDto, imageUrl:string) {
     const { name, telephone, adress } = updateUserDto;
 
     // Trouver l'utilisateur par ID
